@@ -1,12 +1,11 @@
 const mongoose = require('mongoose');
 
-// Admin Schema
 const AdminSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
-    password: { type: String, required: true }, // Hashed password
+    password: { type: String, required: true },
     fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    role: { type: String, enum: ['admin', 'superadmin'], default: 'admin' },
+    role: { type: String, enum: ['admin', 'employee', 'visitor'], default: 'employee' }, // Changed roles
     createdAt: { type: Date, default: Date.now }
 });
 

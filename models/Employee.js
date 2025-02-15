@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-// Employee Schema
 const EmployeeSchema = new mongoose.Schema({
     employeeId: { type: String, required: true, unique: true },
     name: { type: String, required: true },
@@ -12,14 +11,14 @@ const EmployeeSchema = new mongoose.Schema({
         type: [Array], 
         required: true, 
         validate: [arrayLimit, 'Cannot store more than 10 embeddings per person']
-    }, // Store multiple facial embeddings
-    profileImage: { type: String }, // URL or base64 of employee image
+    }, 
+    profileImage: { type: String }, 
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });
 
 function arrayLimit(val) {
-  return val.length <= 10; // Limit the number of embeddings per person
+  return val.length <= 10; 
 }
 
 const Employee = mongoose.model('Employee', EmployeeSchema);

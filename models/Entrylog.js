@@ -7,14 +7,14 @@ const EntryLogSchema = new mongoose.Schema({
     exitTime: { type: Date },
     deviceId: { type: String }, 
     location: { type: String },
-    imageCaptured: { type: String }, // Base64 or URL of captured image
-    isLive: { type: Boolean, default: false }, // True if liveness detected
-    livenessConfidence: { type: Number }, // Confidence score of liveness detection
-    phoneDetected: { type: Boolean, default: false },  // True if phone screen is detected
-    spoofAttempt: { type: Boolean, default: false }, // True if spoofing is suspected
-    glareDetected: { type: Boolean, default: false }, // Detects glare from screens
-    edgeDetected: { type: Boolean, default: false }, // Detects strong edges indicating phone usage
-    moirePatternDetected: { type: Boolean, default: false } // Detects moire patterns from screens
+    imageCaptured: { type: String }, 
+    isLive: { type: Boolean, default: false }, 
+    livenessConfidence: { type: Number }, 
+    phoneDetected: { type: Boolean, default: false },  
+    spoofAttempt: { type: Boolean, default: false }, 
+    glareDetected: { type: Boolean, default: false }, 
+    edgeDetected: { type: Boolean, default: false }, 
+    moirePatternDetected: { type: Boolean, default: false } 
 });
 
 const EntryLog = mongoose.model('EntryLog', EntryLogSchema);

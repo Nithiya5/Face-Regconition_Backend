@@ -1,17 +1,20 @@
-const express = require('express');
-const cors = require('cors');
+const express = require('express')
 const bodyparser = require('body-parser');
-const { default: mongoose } = require('mongoose');
+const mongoose = require('mongoose');
+const cors = require('cors');
 
 const app = express();
 app.use(bodyparser.json())
 app.use(cors());
 
-mongoose.connect('mongodb+srv://nithiyaR:nithiya@2005@cluster0.a02jqzo.mongodb.net/').then(()=>{
+const adminRoutes = require('./routes/adminRoute');
+app.use('/api/admin', adminRoutes);
+
+mongoose.connect('mongodb+srv://kanishka:poorani05@cluster05.pgwmpx4.mongodb.net/FaceRecognition').then(()=>{
     console.log('MongoDB Connected');
 })
 
-app.set('view engine','ejs'); 
+app.set('view engine','ejs');
 
 app.listen(8000,()=>{
     console.log('Server running on port 8000');
