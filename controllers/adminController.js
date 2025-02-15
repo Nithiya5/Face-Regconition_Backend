@@ -1,4 +1,4 @@
-const Admin = require('../models/Admin');  // Assuming the Admin model is in the models folder
+const Admin = require('../models/Admin');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
@@ -6,6 +6,11 @@ const bcrypt = require('bcryptjs');
 const register = async (req, res) => {
     try {
         const { username, email, password, role, fullName } = req.body;
+
+        // Validate input data
+        if (!username || !email || !password || !fullName) {
+            return res.status(400).json({ msg: 'All fields are required' });
+        }
 
         // Check if the user already exists
         const exists = await Admin.findOne({ email });
@@ -38,6 +43,11 @@ const register = async (req, res) => {
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
+
+        // Validate input data
+        if (!email || !password) {
+            return res.status(400).json({ msg: 'Email and password are required' });
+        }
 
         // Check if the user exists
         const user = await Admin.findOne({ email });
