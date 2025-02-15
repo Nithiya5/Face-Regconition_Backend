@@ -5,11 +5,15 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
+app.use(express.json()); // Parse JSON bodies
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+
 app.use(bodyparser.json())
 app.use(cors());
 
 const adminRoutes = require('./routes/adminRoute');
 app.use('/api/admin', adminRoutes);
+
 
 mongoose.connect('mongodb+srv://kanishka:poorani05@cluster05.pgwmpx4.mongodb.net/FaceRecognition').then(()=>{
     console.log('MongoDB Connected');
