@@ -220,6 +220,45 @@ const sendEmail = async (email, password, name) => {
   }
 };
 
+const editEmployee = async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const { name, department, designation, email, phone, canAddVisitor } = req.body;
+
+    // Check if the employee exists
+    const employee = await Employee.findOne({ employeeId });
+    if (!employee) {
+      return res.status(404).json({ msg: "Employee not found" });
+    }
+
+    // Check if email or phone already exists for another employee
+    const existingUser = await Employee.findOne({
+      $or: [{ email }, { phone }],
+      _id: { $ne: employee._id }, // Exclude the current employee's ID
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ msg: "Email or phone already in use by another employee" });
+    }
+
+    // Update fields if provided
+    if (name) employee.name = name;
+    if (department) employee.department = department;
+    if (designation) employee.designation = designation;
+    if (email) employee.email = email;
+    if (phone) employee.phone = phone;
+    if (canAddVisitor !== undefined) employee.canAddVisitor = canAddVisitor;
+
+    await employee.save(); // Save updated employee data
+
+    res.status(200).json({ msg: "Employee details updated successfully", employee });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: "Internal Server Error" });
+  }
+};
 
 
-module.exports = { register,registerEmployee, login };
+
+
+module.exports = { register,registerEmployee, login, editEmployee };
