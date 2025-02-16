@@ -5,19 +5,30 @@ const VisitorSchema = new mongoose.Schema({
     name: { type: String, required: true },
     purpose: { type: String, required: true },
     contactInfo: { type: String },
-    entryTime: { type: Date, default: Date.now },
-    exitTime: { type: Date },
-    hostEmployeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' }, 
-    faceEmbeddings: { 
-        type: [Array], 
-        required: false,
-        validate: [arrayLimit, 'Cannot store more than 10 embeddings per visitor']
-    }, 
-    imageCaptured: { type: String }, 
-    isLive: { type: Boolean, default: false }, 
-    livenessConfidence: { type: Number }, 
-    phoneDetected: { type: Boolean, default: false }, 
-    spoofAttempt: { type: Boolean, default: false } 
+
+    // Stores multiple entry & exit times for each visit
+    visitHistory: [{
+        entryTime: { type: Date, required: true, default: Date.now },
+        exitTime: { type: Date }
+    }],
+
+    // Automatically calculates total visits
+    totalVisits: { 
+        type: Number, 
+        default: 0 
+    },
+
+    // Reference Employee using employeeId instead of ObjectId
+    hostEmployeeId: { type: String, required: true, ref: 'Employee' },  
+
+    // Cloudinary URL for profile image
+    profileImage: { type: String }  
+});
+
+// Middleware to update totalVisits before saving
+VisitorSchema.pre('save', function(next) {
+    this.totalVisits = this.visitHistory.length;
+    next();
 });
 
 module.exports = mongoose.model('Visitor', VisitorSchema);
