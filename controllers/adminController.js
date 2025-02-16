@@ -258,7 +258,23 @@ const editEmployee = async (req, res) => {
   }
 };
 
+const viewEmployeeDetails = async (req, res) => {
+    try {
+      const { employeeId } = req.params;
+  
+      // Fetch employee details (excluding password for security)
+      const employee = await Employee.findOne({ employeeId }).select('-password');
+  
+      if (!employee) {
+        return res.status(404).json({ msg: "Employee not found" });
+      }
+  
+      res.status(200).json({ msg: "Employee details fetched successfully", employee });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ msg: "Internal Server Error" });
+    }
+  };
+  
 
-
-
-module.exports = { register,registerEmployee, login, editEmployee };
+module.exports = { register,registerEmployee, login, editEmployee, viewEmployeeDetails };
