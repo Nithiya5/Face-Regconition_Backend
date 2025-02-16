@@ -12,11 +12,8 @@ app.use(bodyparser.json())
 app.use(cors());
 
 const adminRoutes = require('./routes/adminRoute');
-<<<<<<< HEAD
-
-=======
 const visitorRoutes = require('./routes/visitorRoute');
->>>>>>> origin/main
+
 app.use('/api/admin', adminRoutes);
 app.use('/api/visitor', visitorRoutes);
 
