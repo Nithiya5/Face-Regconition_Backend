@@ -220,24 +220,6 @@ const sendEmail = async (email, password, name) => {
   }
 };
 
-const deleteEmployee = async (req, res) => {
-  try {
-    const { employeeId } = req.params;
-    console.log(employeeId);
-
-    // Find and delete the employee by employeeId
-    const deletedEmployee = await Employee.findOneAndDelete({ employeeId });
-
-    if (!deletedEmployee) {
-      return res.status(404).json({ msg: 'Employee not found' });
-    }
-
-    res.status(200).json({ msg: 'Employee deleted successfully' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ msg: 'Internal Server Error' });
-  }
-};
 
 
-module.exports = { register,registerEmployee, login,deleteEmployee };
+module.exports = { register,registerEmployee, login };
