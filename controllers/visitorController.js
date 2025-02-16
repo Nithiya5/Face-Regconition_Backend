@@ -139,16 +139,38 @@ const getAllVisitors = async (req, res) => {
 // Get visitors for an employee (Employees can only view their own visitors)
 const getVisitorsForEmployee = async (req, res) => {
   try {
-    const { employeeId } = req.params;
-    const user = req.user;
+    const { employeeId } = req.params; // Employee ID from the URL parameter
+    const user = req.user; // The user decoded from the JWT
 
-    // Check if the user is an admin or the employee trying to view their own visitors
-    if (user.role !== 'admin' && user.employeeId !== employeeId) {
-      return res.status(403).json({ error: 'Unauthorized: You cannot view other employees’ visitors' });
+    // Ensure the employeeId is in the correct format and is provided
+    if (!employeeId) {
+      return res.status(400).json({ error: 'Employee ID is required' });
+    }
+
+    // Check if the user is an admin or if the logged-in employee is trying to view their own visitors
+    if (user.role !== 'admin') {
+      // If the logged-in user is not an admin, check if the employee is trying to view their own visitors
+      const employee = await Employee.findById(user.employeeId); // Query the database using the user’s ObjectId
+
+      // If the employee doesn't exist, return an error
+      if (!employee) {
+        return res.status(404).json({ error: 'Employee not found' });
+      }
+
+      // If the logged-in employee’s ID doesn’t match the requested employeeId, return an authorization error
+      if (employee.employeeId !== employeeId) {
+        return res.status(403).json({ error: 'Unauthorized: You cannot view other employees’ visitors' });
+      }
     }
 
     // Find all visitors where the hostEmployeeId matches the employeeId
     const visitors = await Visitor.find({ hostEmployeeId: employeeId });
+
+    if (!visitors || visitors.length === 0) {
+      return res.status(404).json({ error: 'No visitors found for this employee' });
+    }
+
+    // Return the list of visitors
     res.status(200).json({ visitors });
   } catch (error) {
     console.error('Error fetching visitors for employee:', error);
@@ -157,18 +179,31 @@ const getVisitorsForEmployee = async (req, res) => {
 };
 
 
+
 // Delete a visitor (Employees can only delete their visitors, Admins get notified)
 const deleteVisitor = async (req, res) => {
   try {
-    const { visitorId } = req.params;
-    const user = req.user;
+    const { visitorId } = req.params; // Visitor ID from the URL parameter
+    const user = req.user; // The user decoded from the JWT
 
+    // Find the visitor by visitorId
     const visitor = await Visitor.findOne({ visitorId });
     if (!visitor) return res.status(404).json({ msg: 'Visitor not found.' });
 
-    // Check if the user is an employee trying to delete their own visitor
-    if (user.role === 'employee' && visitor.hostEmployeeId !== user.employeeId) {
-      return res.status(403).json({ msg: 'Unauthorized: You can only delete your own visitors.' });
+    // Check if the logged-in user is an admin or the employee trying to delete their own visitor
+    if (user.role === 'employee') {
+      // Check if the visitor's hostEmployeeId matches the logged-in user's employeeId
+      const employee = await Employee.findById(user.employeeId); // Query the database to find the employee by ObjectId
+
+      // If the employee doesn't exist, return an error
+      if (!employee) {
+        return res.status(404).json({ msg: 'Employee not found' });
+      }
+
+      // If the employee's ID does not match the visitor's hostEmployeeId, return an authorization error
+      if (visitor.hostEmployeeId !== employee.employeeId) {
+        return res.status(403).json({ msg: 'Unauthorized: You can only delete your own visitors.' });
+      }
     }
 
     // Delete the visitor
@@ -180,6 +215,7 @@ const deleteVisitor = async (req, res) => {
     res.status(500).json({ msg: 'Internal Server Error' });
   }
 };
+
 
 module.exports = {
   registerVisitor,
