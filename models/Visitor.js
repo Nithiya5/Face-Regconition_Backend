@@ -22,10 +22,9 @@ const VisitorSchema = new mongoose.Schema({
     hostEmployeeId: { type: String, required: true, ref: 'Employee' },  
 
     // Cloudinary URL for profile image
-    profileImage: { type: String }  
+    profileImage: { type: String }
 });
 
-// Middleware to update totalVisits before saving
 VisitorSchema.pre('save', function(next) {
     this.totalVisits = this.visitHistory.length;
     next();
