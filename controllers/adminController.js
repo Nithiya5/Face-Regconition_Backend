@@ -97,51 +97,58 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage: storage }).single('image'); 
+// Use `.fields()` to accept both file and text fields
+const upload = multer({ storage: storage }).fields([
+  { name: 'image', maxCount: 1 }, // Profile image
+  { name: 'faceEmbeddings' }, // Ensures `faceEmbeddings` is processed correctly
+]);
 
+const nodemailer = require('nodemailer');
 
 const registerEmployee = async (req, res) => {
   try {
-    // First, validate the fields
-    const { employeeId, name, department, designation, email, phone, password,  canAddVisitor } = req.body;
-    // console.log(faceEmbeddings);
-    // if (!faceEmbeddings || faceEmbeddings.length === 0) {
-    //   return res.status(400).json({ msg: 'No face embeddings received' });
-    // }
-    let faceEmbeddings = [];
-
-    try {
-      // Ensure faceEmbeddings is properly parsed
-      if (typeof req.body.faceEmbeddings === "string") {
-        faceEmbeddings = JSON.parse(req.body.faceEmbeddings.trim()); // Trim to avoid any accidental spaces
-        
-      } else {
-        faceEmbeddings = req.body.faceEmbeddings;
-      }
-
-      console.log("Parsed faceEmbeddings:", faceEmbeddings); // Debugging step
-
-      if (!Array.isArray(faceEmbeddings) || faceEmbeddings.length === 0 || faceEmbeddings.length > 10) {
-        return res.status(400).json({ msg: "Face embeddings must be an array with 1-10 values." });
-      }
-    } catch (error) {
-      console.error("Parsing Error:", error);
-      return res.status(400).json({ msg: "Invalid face embeddings format. Must be a valid JSON array." });
-    }
-
-    // Multer upload middleware for handling the profile image upload
+    // Multer upload middleware
     upload(req, res, async (err) => {
       if (err) {
         return res.status(400).json({ error: 'Error uploading profile image' });
       }
 
       try {
+        // Extract fields after multer has processed the form-data
+        const { employeeId, name, department, designation, email, phone, password, canAddVisitor } = req.body;
+
+        let faceEmbeddings = [];
+
+        // Ensure faceEmbeddings is properly parsed
+        if (req.body.faceEmbeddings) {
+          try {
+            faceEmbeddings = JSON.parse(req.body.faceEmbeddings.trim());
+          } catch (error) {
+            return res.status(400).json({ msg: "Invalid face embeddings format. Must be a valid JSON array." });
+          }
+        }
+
+        console.log("Parsed faceEmbeddings:", faceEmbeddings); // Debugging step
+
+        if (!Array.isArray(faceEmbeddings) || faceEmbeddings.length === 0 || faceEmbeddings.length > 10) {
+          return res.status(400).json({ msg: "Face embeddings must be an array with 1-10 values." });
+        }
+
+        // Check if email, employeeId, or phone already exist in the database
+        const existingEmployee = await Employee.findOne({
+          $or: [{ email }, { employeeId }, { phone }]
+        });
+
+        if (existingEmployee) {
+          return res.status(400).json({ msg: "Employee ID, Email, or Phone already exists." });
+        }
+
         // Hash the password for storing in the database
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
         // Upload the profile image to Cloudinary
-        const cloudinaryResponse = await cloudinary.uploader.upload(req.file.path);
+        const cloudinaryResponse = await cloudinary.uploader.upload(req.files.image[0].path);
 
         // Create a new employee record
         const newEmployee = new Employee({
@@ -158,9 +165,16 @@ const registerEmployee = async (req, res) => {
         });
 
         await newEmployee.save(); // Save the employee record
-         
+
+        // Send email with login details
+        sendEmail(email, password, name);
+
         // Respond with success
-        res.status(200).json({ msg: 'Employee registered successfully', profileImageUrl: cloudinaryResponse.url });
+        res.status(200).json({
+          msg: 'Employee registered successfully. Login details sent via email.',
+          profileImageUrl: cloudinaryResponse.url,
+          employeeId: newEmployee.employeeId
+        });
       } catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Internal Server Error' });
@@ -171,6 +185,41 @@ const registerEmployee = async (req, res) => {
     res.status(500).json({ msg: 'Internal Server Error' });
   }
 };
+
+
+// Function to send email using Nodemailer
+const sendEmail = async (email, password, name) => {
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER, // Your email
+        pass: process.env.EMAIL_PASS  // Your email password or app password
+      }
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Your Employee Account Has Been Created',
+      html: `
+        <h3>Hello ${name},</h3>
+        <p>Your employee account has been successfully created.</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Temporary Password:</strong> ${password}</p>
+        <p>Please log in and change your password immediately.</p>
+        <p>Best regards,</p>
+        <p>Admin Team</p>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Email sent to ${email}`);
+  } catch (error) {
+    console.error('Error sending email:', error);
+  }
+};
+
 
 
 module.exports = { register,registerEmployee, login };
