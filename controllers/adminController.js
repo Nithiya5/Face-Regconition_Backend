@@ -116,9 +116,10 @@ const registerEmployee = async (req, res) => {
       try {
         // Extract fields after multer has processed the form-data
         const { employeeId, name, department, designation, email, phone, password, canAddVisitor } = req.body;
-
+        console.log(department);
+        console.log(name);
         let faceEmbeddings = [];
-        console.log("Raw faceEmbeddings:", req.body.faceEmbeddings);
+        
 
 
         // Ensure faceEmbeddings is properly parsed
@@ -131,7 +132,7 @@ const registerEmployee = async (req, res) => {
           }
         }
 
-        console.log("Parsed faceEmbeddings:", faceEmbeddings); // Debugging step
+        // console.log("Parsed faceEmbeddings:", faceEmbeddings); // Debugging step
 
         // Ensure faceEmbeddings length is between 1 and 10
         if (faceEmbeddings.length === 0 || faceEmbeddings.length > 10) {
