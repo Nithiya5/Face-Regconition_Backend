@@ -82,9 +82,9 @@ const Employee = require('../models/Employee'); // Assuming you have an Employee
 
 // Initialize Cloudinary
 cloudinary.config({
-  cloud_name: 'djxbzcayc',
-  api_key: '177435834375344',
-  api_secret: 'VC8o4lQSa551ADbsUtPtV3jIaO4', // Cloudinary API secret (store it in env variables in production)
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET, // Cloudinary API secret (store it in env variables in production)
 });
 
 // Multer setup for handling file uploads
