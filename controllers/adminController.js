@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 // Register Admin, Employee, or Visitor
 const register = async (req, res) => {
     try {
-        const { username, email, password, role, fullName } = req.body;
+        const { username, email, password, fullName } = req.body;
 
         // Validate input data
         if (!username || !email || !password || !fullName) {
@@ -27,7 +27,7 @@ const register = async (req, res) => {
             username,
             email,
             password: hashedPassword,
-            role: role || 'employee', // Default to 'employee' if no role is provided
+            // role: role || 'employee', // Default to 'employee' if no role is provided
             fullName
         });
 
