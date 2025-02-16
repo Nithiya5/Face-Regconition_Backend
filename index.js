@@ -12,6 +12,7 @@ app.use(bodyparser.json())
 app.use(cors());
 
 const adminRoutes = require('./routes/adminRoute');
+
 app.use('/api/admin', adminRoutes);
 
 
