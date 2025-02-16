@@ -122,15 +122,30 @@ const registerEmployee = async (req, res) => {
         // Ensure faceEmbeddings is properly parsed
         if (req.body.faceEmbeddings) {
           try {
+            // Parse the faceEmbeddings as an array of arrays
             faceEmbeddings = JSON.parse(req.body.faceEmbeddings.trim());
+
+            // Validate faceEmbeddings format
+            if (!Array.isArray(faceEmbeddings)) {
+              return res.status(400).json({ msg: "Face embeddings must be an array of arrays." });
+            }
+
+            // Validate each embedding is an array of numbers (e.g., 128 numbers per image)
+            for (const embedding of faceEmbeddings) {
+              if (!Array.isArray(embedding) || embedding.length !== 128 || !embedding.every(Number.isFinite)) {
+                return res.status(400).json({ msg: "Each embedding must be an array of 128 numbers." });
+              }
+            }
+
           } catch (error) {
-            return res.status(400).json({ msg: "Invalid face embeddings format. Must be a valid JSON array." });
+            return res.status(400).json({ msg: "Invalid face embeddings format. Must be a valid JSON array of arrays." });
           }
         }
 
         console.log("Parsed faceEmbeddings:", faceEmbeddings); // Debugging step
 
-        if (!Array.isArray(faceEmbeddings) || faceEmbeddings.length === 0 || faceEmbeddings.length > 10) {
+        // Ensure faceEmbeddings length is between 1 and 10
+        if (faceEmbeddings.length === 0 || faceEmbeddings.length > 10) {
           return res.status(400).json({ msg: "Face embeddings must be an array with 1-10 values." });
         }
 
@@ -159,7 +174,7 @@ const registerEmployee = async (req, res) => {
           email,
           phone,
           password: hashedPassword,
-          faceEmbeddings,
+          faceEmbeddings,  // Storing the parsed and validated face embeddings
           canAddVisitor: canAddVisitor || false, // Default to false if not provided
           profileImage: cloudinaryResponse.url, // Store Cloudinary image URL in the database
         });
@@ -185,6 +200,7 @@ const registerEmployee = async (req, res) => {
     res.status(500).json({ msg: 'Internal Server Error' });
   }
 };
+
 
 
 // Function to send email using Nodemailer
