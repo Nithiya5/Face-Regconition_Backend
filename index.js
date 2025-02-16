@@ -13,9 +13,11 @@ app.use(cors());
 
 const adminRoutes = require('./routes/adminRoute');
 const visitorRoutes = require('./routes/visitorRoute');
+const employeeRoutes = require('./routes/employeeRoute');
 
 app.use('/api/admin', adminRoutes);
 app.use('/api/visitor', visitorRoutes);
+app.use('/api/employee', employeeRoutes);
 
 
 mongoose.connect('mongodb+srv://kanishka:poorani05@cluster05.pgwmpx4.mongodb.net/FaceRecognition').then(()=>{
