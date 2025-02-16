@@ -126,21 +126,6 @@ const registerEmployee = async (req, res) => {
           try {
             // Parse the faceEmbeddings as an array of arrays
             faceEmbeddings = JSON.parse(req.body.faceEmbeddings.trim());
-            console.log("Raw faceEmbeddings:", req.body.faceEmbeddings);
-
-
-            // Validate faceEmbeddings format
-            if (!Array.isArray(faceEmbeddings)) {
-              return res.status(400).json({ msg: "Face embeddings must be an array of arrays." });
-            }
-
-            // Validate each embedding is an array of numbers (e.g., 128 numbers per image)
-            for (const embedding of faceEmbeddings) {
-              if (!Array.isArray(embedding) || embedding.length !== 128 || !embedding.every(Number.isFinite)) {
-                return res.status(400).json({ msg: "Each embedding must be an array of 128 numbers." });
-              }
-            }
-
           } catch (error) {
             return res.status(400).json({ msg: "Invalid face embeddings format. Must be a valid JSON array of arrays." });
           }
@@ -204,6 +189,8 @@ const registerEmployee = async (req, res) => {
     res.status(500).json({ msg: 'Internal Server Error' });
   }
 };
+
+
 // Function to send email using Nodemailer
 const sendEmail = async (email, password, name) => {
   try {
