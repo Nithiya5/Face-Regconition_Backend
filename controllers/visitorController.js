@@ -11,63 +11,75 @@ cloudinary.config({
 });
 
 // Multer for file uploads
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => cb(null, 'uploads/'),
+//   filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname),
+// });
+
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname),
+  destination: (req, file, cb) => {
+    console.log("Destination callback called");
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    console.log("Filename callback called:", file.originalname);
+    cb(null, Date.now() + '-' + file.originalname);
+  },
 });
 
-const upload = multer({ storage }).fields([{ name: 'image', maxCount: 1 }]);
+const upload = multer({ 
+  storage, 
+  limits: { fileSize: 5 * 1024 * 1024 } // Limit file size to 5MB
+}).fields([{ name: 'image', maxCount: 1 }]);
 
-// Register a new visitor
 const registerVisitor = async (req, res) => {
-  try {
-    upload(req, res, async (err) => {
-      if (err) return res.status(400).json({ error: 'Error uploading profile image' });
+  upload(req, res, async (err) => {
+    if (err) {
+      console.error("Multer Error:", err);
+      return res.status(400).json({ error: 'Error uploading profile image', details: err.message });
+    }
 
+    console.log("Uploaded files:", req.files); // Debugging line
+
+    try {
       const { visitorId, name, purpose, contactInfo, hostEmployeeId, entryTime, exitTime } = req.body;
-      const user = req.user; // Logged-in user
 
-      // Ensure visitor ID is unique
-      const existingVisitor = await Visitor.findOne({ visitorId });
-      if (existingVisitor) return res.status(400).json({ msg: 'Visitor with this ID already exists.' });
-
-      // Ensure host employee exists
-      const hostEmployee = await Employee.findById(hostEmployeeId);
-      if (!hostEmployee) return res.status(400).json({ msg: 'Host employee not found.' });
-
-      // Check employee permissions
-      if (user.role === 'employee' && !user.canAddVisitor) {
-        return res.status(403).json({ msg: 'You do not have permission to add visitors.' });
+      if (!req.files || !req.files.image) {
+        return res.status(400).json({ error: "Image is required." });
       }
 
       // Upload image to Cloudinary
-      const cloudinaryResponse = req.files.image ? await cloudinary.uploader.upload(req.files.image[0].path) : null;
+      const cloudinaryResponse = await cloudinary.uploader.upload(req.files.image[0].path);
 
-      // Create visitor entry
+      // Save visitor in DB
       const newVisitor = new Visitor({
         visitorId,
         name,
         purpose,
         contactInfo,
         hostEmployeeId,
-        profileImage: cloudinaryResponse ? cloudinaryResponse.url : null,
+        profileImage: cloudinaryResponse.url,
         visitHistory: [{
           entryTime: new Date(entryTime),
           exitTime: exitTime ? new Date(exitTime) : null,
         }],
-        totalVisits: 1, // First visit
+        totalVisits: 1,
       });
 
       await newVisitor.save();
       res.status(200).json({ msg: 'Visitor registered successfully.', visitorId: newVisitor.visitorId });
-    });
-  } catch (error) {
-    console.error('Error registering visitor:', error);
-    res.status(500).json({ msg: 'Internal Server Error' });
-  }
+    } catch (error) {
+      console.error('Error registering visitor:', error);
+      res.status(500).json({ msg: 'Internal Server Error' });
+    }
+  });
 };
 
+
 // Update visitor visit history
+const mongoose = require('mongoose');
+
 const updateVisitHistory = async (req, res) => {
   try {
     const { visitorId } = req.params;
@@ -77,11 +89,12 @@ const updateVisitHistory = async (req, res) => {
     const visitor = await Visitor.findOne({ visitorId });
     if (!visitor) return res.status(404).json({ msg: 'Visitor not found.' });
 
-    const hostEmployee = await Employee.findById(visitor.hostEmployeeId);
+    // Use employeeId instead of _id
+    const hostEmployee = await Employee.findOne({ employeeId: visitor.hostEmployeeId });
     if (!hostEmployee) return res.status(400).json({ msg: 'Host employee not found.' });
 
     // Employees can only update their own visitors
-    if (user.role === 'employee' && visitor.hostEmployeeId.toString() !== user._id.toString()) {
+    if (user.role === 'employee' && visitor.hostEmployeeId !== user.employeeId) {
       return res.status(403).json({ msg: 'Unauthorized: You can only update your visitors.' });
     }
 
@@ -107,7 +120,14 @@ const getAllVisitors = async (req, res) => {
       return res.status(403).json({ msg: 'Only admins can view all visitors.' });
     }
 
-    const visitors = await Visitor.find().populate('hostEmployeeId', 'name department');
+    const visitors = await Visitor.find();
+
+    // Manually populate the employee details using employeeId
+    for (let visitor of visitors) {
+      const hostEmployee = await Employee.findOne({ employeeId: visitor.hostEmployeeId }, 'name department');
+      visitor.hostEmployee = hostEmployee;
+    }
+
     res.status(200).json({ visitors });
   } catch (error) {
     console.error('Error fetching visitors:', error);
@@ -115,16 +135,19 @@ const getAllVisitors = async (req, res) => {
   }
 };
 
+
 // Get visitors for an employee (Employees can only view their own visitors)
 const getVisitorsForEmployee = async (req, res) => {
   try {
     const { employeeId } = req.params;
     const user = req.user;
 
-    if (user.role !== 'admin' && user._id.toString() !== employeeId) {
+    // Check if the user is an admin or the employee trying to view their own visitors
+    if (user.role !== 'admin' && user.employeeId !== employeeId) {
       return res.status(403).json({ error: 'Unauthorized: You cannot view other employees’ visitors' });
     }
 
+    // Find all visitors where the hostEmployeeId matches the employeeId
     const visitors = await Visitor.find({ hostEmployeeId: employeeId });
     res.status(200).json({ visitors });
   } catch (error) {
@@ -132,6 +155,7 @@ const getVisitorsForEmployee = async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
 
 // Delete a visitor (Employees can only delete their visitors, Admins get notified)
 const deleteVisitor = async (req, res) => {
@@ -142,10 +166,12 @@ const deleteVisitor = async (req, res) => {
     const visitor = await Visitor.findOne({ visitorId });
     if (!visitor) return res.status(404).json({ msg: 'Visitor not found.' });
 
-    if (user.role === 'employee' && visitor.hostEmployeeId.toString() !== user._id.toString()) {
+    // Check if the user is an employee trying to delete their own visitor
+    if (user.role === 'employee' && visitor.hostEmployeeId !== user.employeeId) {
       return res.status(403).json({ msg: 'Unauthorized: You can only delete your own visitors.' });
     }
 
+    // Delete the visitor
     await Visitor.deleteOne({ visitorId });
 
     res.status(200).json({ msg: 'Visitor deleted successfully.' });

@@ -19,7 +19,10 @@ const VisitorSchema = new mongoose.Schema({
     },
 
     // Reference Employee using employeeId instead of ObjectId
-    hostEmployeeId: { type: String, required: true, ref: 'Employee' },  
+    hostEmployeeId: { 
+        type: String, // Change from ObjectId to String to match the Employee's employeeId
+        required: true 
+      },  
 
     // Cloudinary URL for profile image
     profileImage: { type: String }
