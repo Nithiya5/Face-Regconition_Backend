@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 // Register Admin, Employee, or Visitor
 const register = async (req, res) => {
     try {
-        const { username, email, password, role, fullName } = req.body;
+        const { username, email, password, fullName } = req.body;
 
         // Validate input data
         if (!username || !email || !password || !fullName) {
@@ -27,7 +27,7 @@ const register = async (req, res) => {
             username,
             email,
             password: hashedPassword,
-            role: role || 'employee', // Default to 'employee' if no role is provided
+            // role: role || 'employee', // Default to 'employee' if no role is provided
             fullName
         });
 
@@ -116,9 +116,10 @@ const registerEmployee = async (req, res) => {
       try {
         // Extract fields after multer has processed the form-data
         const { employeeId, name, department, designation, email, phone, password, canAddVisitor } = req.body;
-
+        console.log(department);
+        console.log(name);
         let faceEmbeddings = [];
-        console.log("Raw faceEmbeddings:", req.body.faceEmbeddings);
+        
 
 
         // Ensure faceEmbeddings is properly parsed
@@ -131,7 +132,7 @@ const registerEmployee = async (req, res) => {
           }
         }
 
-        console.log("Parsed faceEmbeddings:", faceEmbeddings); // Debugging step
+        // console.log("Parsed faceEmbeddings:", faceEmbeddings); // Debugging step
 
         // Ensure faceEmbeddings length is between 1 and 10
         if (faceEmbeddings.length === 0 || faceEmbeddings.length > 10) {
