@@ -9,7 +9,7 @@ const EmployeeSchema = new mongoose.Schema({
     password: { type: String, required: true },
     phone: { type: String, required: true },
     faceEmbeddings: { 
-        type: [Array], 
+        type: [[Number]], 
         required: true, 
         validate: [arrayLimit, 'Cannot store more than 10 embeddings per person']
     }, 
