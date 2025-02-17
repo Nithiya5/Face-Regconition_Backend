@@ -1,4 +1,5 @@
 const Admin = require('../models/Admin');
+const Employee = require('../models/Employee');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
@@ -80,7 +81,7 @@ const login = async (req, res) => {
 
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer'); // Import multer for file uploads
-const Employee = require('../models/Employee'); // Assuming you have an Employee model
+ // Assuming you have an Employee model
 
 // Initialize Cloudinary
 cloudinary.config({
