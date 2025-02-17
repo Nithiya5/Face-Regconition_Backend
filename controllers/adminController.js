@@ -4,40 +4,42 @@ const bcrypt = require('bcryptjs');
 
 // Register Admin, Employee, or Visitor
 const register = async (req, res) => {
-    try {
-        const { username, email, password, fullName } = req.body;
+  try {
+      const { username, email, password, fullName } = req.body;
 
-        // Validate input data
-        if (!username || !email || !password || !fullName) {
-            return res.status(400).json({ msg: 'All fields are required' });
-        }
+      // Validate input data
+      if (!username || !email || !password || !fullName) {
+          return res.status(400).json({ msg: 'All fields are required' });
+      }
 
-        // Check if the user already exists
-        const exists = await Admin.findOne({ email });
-        if (exists) {
-            return res.status(400).json({ msg: 'User already exists' });
-        }
+      // Check if the email already exists in either Admin or Employee collection
+      const adminExists = await Admin.findOne({ email });
+      const employeeExists = await Employee.findOne({ email });
 
-        // Hash the password before saving
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+      if (adminExists || employeeExists) {
+          return res.status(400).json({ msg: 'Email already exists in Admin or Employee database' });
+      }
 
-        // Create a new admin/employee/visitor
-        const newUser = new Admin({
-            username,
-            email,
-            password: hashedPassword,
-            // role: role || 'employee', // Default to 'employee' if no role is provided
-            fullName
-        });
+      // Hash the password before saving
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
 
-        await newUser.save();
-        res.status(200).json({ msg: 'User registered successfully' });
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ msg: 'Internal Server Error' });
-    }
+      // Create a new admin
+      const newUser = new Admin({
+          username,
+          email,
+          password: hashedPassword,
+          fullName
+      });
+
+      await newUser.save();
+      res.status(200).json({ msg: 'Admin registered successfully' });
+  } catch (error) {
+      console.log(error);
+      res.status(500).json({ msg: 'Internal Server Error' });
+  }
 };
+
 
 // Login Function for Admin, Employee, or Visitor
 const login = async (req, res) => {
