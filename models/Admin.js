@@ -5,7 +5,7 @@ const AdminSchema = new mongoose.Schema({
     password: { type: String, required: true },
     fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    role: { type: String, enum: ['admin', 'employee', 'visitor'], default: 'employee' }, // Changed roles
+    role: { type: String, enum: ['admin', 'employee'], default: 'admin' }, // Changed roles
     createdAt: { type: Date, default: Date.now }
 });
 
