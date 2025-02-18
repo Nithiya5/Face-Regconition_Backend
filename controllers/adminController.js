@@ -155,75 +155,122 @@ const login = async (req, res) => {
         res.status(500).json({ msg: 'Internal Server Error' });
     }
 };
- 
- // Register employee function
- const registerEmployee = async (req, res) => {
-   try {
-     // Multer upload middleware
-     upload(req, res, async (err) => {
-       if (err) {
-         return res.status(400).json({ error: 'Error uploading profile image' });
-       }
- 
-       try {
-         // Extract fields after multer has processed the form-data
-         const { employeeId, name, department, designation, email, phone, password, canAddVisitor } = req.body;
- 
-         // Check if email, employeeId, or phone already exist in the database
-         const existingEmployee = await Employee.findOne({
-           $or: [{ email }, { employeeId }, { phone }],
-         });
- 
-         if (existingEmployee) {
-           return res.status(400).json({ msg: 'Employee ID, Email, or Phone already exists.' });
-         }
- 
-         // Hash the password for storing in the database
-         const salt = await bcrypt.genSalt(10);
-         const hashedPassword = await bcrypt.hash(password, salt);
- 
-         // Upload the profile image to Cloudinary
-         const cloudinaryResponse = await cloudinary.uploader.upload(req.files.image[0].path);
- 
-         // Process the images and extract face embeddings
-         const imageBuffers = req.files.image.map(file => file.buffer);
-         const faceEmbeddings = await processImages(imageBuffers);
- 
-         // Create a new employee record
-         const newEmployee = new Employee({
-           employeeId,
-           name,
-           department,
-           designation,
-           email,
-           phone,
-           password: hashedPassword,
-           faceEmbeddings, // Storing the parsed and validated face embeddings
-           canAddVisitor: canAddVisitor || false, // Default to false if not provided
-           profileImage: cloudinaryResponse.url, // Store Cloudinary image URL in the database
-         });
- 
-         await newEmployee.save(); // Save the employee record
- 
-         // Send email with login details
-         sendEmail(email, password, name);
- 
-         // Respond with success
-         res.status(200).json({
-           msg: 'Employee registered successfully. Login details sent via email.',
-           profileImageUrl: cloudinaryResponse.url,
-           employeeId: newEmployee.employeeId,
-         });
-       } catch (error) {
-         console.error(error);
-         res.status(500).json({ msg: 'Internal Server Error' });
-       }
-     });
-   } catch (error) {
-     console.error(error);
-     res.status(500).json({ msg: 'Internal Server Error' });
-   }
- };
+
+
+const cloudinary = require('cloudinary').v2;
+const multer = require('multer'); // Import multer for file uploads
+ // Assuming you have an Employee model
+
+// Initialize Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET, // Cloudinary API secret (store it in env variables in production)
+});
+
+// Multer setup for handling file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/'); // Temporary storage location
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname); // Save with unique name
+  },
+});
+
+// Use .fields() to accept both file and text fields
+const upload = multer({ storage: storage }).fields([
+  { name: 'image', maxCount: 1 }, // Profile image
+  { name: 'faceEmbeddings' }, // Ensures faceEmbeddings is processed correctly
+]);
+
+const nodemailer = require('nodemailer');
+
+const registerEmployee = async (req, res) => {
+  try {
+    // Multer upload middleware
+    upload(req, res, async (err) => {
+      if (err) {
+        return res.status(400).json({ error: 'Error uploading profile image' });
+      }
+
+      try {
+        // Extract fields after multer has processed the form-data
+        const { employeeId, name, department, designation, email, phone, password, canAddVisitor } = req.body;
+        console.log(department);
+        console.log(name);
+        let faceEmbeddings = [];
+        
+
+
+        // Ensure faceEmbeddings is properly parsed
+        if (req.body.faceEmbeddings) {
+          try {
+            // Parse the faceEmbeddings as an array of arrays
+            faceEmbeddings = JSON.parse(req.body.faceEmbeddings.trim());
+          } catch (error) {
+            return res.status(400).json({ msg: "Invalid face embeddings format. Must be a valid JSON array of arrays." });
+          }
+        }
+
+        // console.log("Parsed faceEmbeddings:", faceEmbeddings); // Debugging step
+
+        // Ensure faceEmbeddings length is between 1 and 10
+        if (faceEmbeddings.length === 0 || faceEmbeddings.length > 10) {
+          return res.status(400).json({ msg: "Face embeddings must be an array with 1-10 values." });
+        }
+
+        // Check if email, employeeId, or phone already exist in the database
+        const existingEmployee = await Employee.findOne({
+          $or: [{ email }, { employeeId }, { phone }]
+        });
+
+        if (existingEmployee) {
+          return res.status(400).json({ msg: "Employee ID, Email, or Phone already exists." });
+        }
+
+        // Hash the password for storing in the database
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // Upload the profile image to Cloudinary
+        const cloudinaryResponse = await cloudinary.uploader.upload(req.files.image[0].path);
+
+        // Create a new employee record
+        const newEmployee = new Employee({
+          employeeId,
+          name,
+          department,
+          designation,
+          email,
+          phone,
+          password: hashedPassword,
+          faceEmbeddings,  // Storing the parsed and validated face embeddings
+          canAddVisitor: canAddVisitor || false, // Default to false if not provided
+          profileImage: cloudinaryResponse.url, // Store Cloudinary image URL in the database
+        });
+
+        await newEmployee.save(); // Save the employee record
+
+        // Send email with login details
+        sendEmail(email, password, name);
+
+        // Respond with success
+        res.status(200).json({
+          msg: 'Employee registered successfully. Login details sent via email.',
+          profileImageUrl: cloudinaryResponse.url,
+          employeeId: newEmployee.employeeId
+        });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Internal Server Error' });
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: 'Internal Server Error' });
+  }
+};
 
 
 // Function to send email using Nodemailer
@@ -242,14 +289,17 @@ const sendEmail = async (email, password, name) => {
       to: email,
       subject: 'Your Employee Account Has Been Created',
       html: `
-        <h3>Hello ${name},</h3>
-        <p>Your employee account has been successfully created.</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Temporary Password:</strong> ${password}</p>
-        <p>Please log in and change your password immediately.</p>
-        <p>Best regards,</p>
-        <p>Admin Team</p>
-      `
+  <h3>Hello ${name},</h3>
+  <p>Your employee account has been successfully created.</p>
+  <p><strong>Email:</strong> ${email}</p>
+  <p><strong>Temporary Password:</strong> ${password}</p>
+  <p>Please log in and change your password immediately.</p>
+  <p>Before you can start tracking your attendance, we need you to provide your face embeddings for identification. This will enable the system to recognize you for attendance purposes.</p>
+  <p>To do this, please log in and submit your face embeddings in your profile settings.</p>
+  <p>If you have any questions or face issues, feel free to reach out to the Admin Team.</p>
+  <p>Best regards,</p>
+  <p>Admin Team</p>
+`
     };
 
     await transporter.sendMail(mailOptions);
