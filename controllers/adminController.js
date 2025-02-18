@@ -21,21 +21,7 @@ const multer = require('multer'); // Import multer for file uploads
  });
  
 //  Multer setup for handling file uploads
- const storage = multer.diskStorage({
-   destination: function (req, file, cb) {
-     cb(null, 'uploads/'); // Temporary storage location
-   },
-   filename: function (req, file, cb) {
-     cb(null, Date.now() + '-' + file.originalname); // Save with unique name
-   },
- });
-
-
- // Use .fields() to accept both file and text fields
- const upload = multer({ storage: storage }).fields([
-   { name: 'image', maxCount: 1 }, // Profile image
-   { name: 'faceEmbeddings' }, // Ensures faceEmbeddings is processed correctly
- ]);
+ 
  
 // const upload = multer({
 //   storage: storage,
@@ -274,153 +260,6 @@ const registerEmployee = async (req, res) => {
 
 
 // Function to send email using Nodemailer
-const sendEmail = async (email, password, name) => {
-  try {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER, // Your email
-        pass: process.env.EMAIL_PASS  // Your email password or app password
-      }
-    });
-
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Your Employee Account Has Been Created',
-      html: `
-  <h3>Hello ${name},</h3>
-  <p>Your employee account has been successfully created.</p>
-  <p><strong>Email:</strong> ${email}</p>
-  <p><strong>Temporary Password:</strong> ${password}</p>
-  <p>Please log in and change your password immediately.</p>
-  <p>Before you can start tracking your attendance, we need you to provide your face embeddings for identification. This will enable the system to recognize you for attendance purposes.</p>
-  <p>To do this, please log in and submit your face embeddings in your profile settings.</p>
-  <p>If you have any questions or face issues, feel free to reach out to the Admin Team.</p>
-  <p>Best regards,</p>
-  <p>Admin Team</p>
-`
-    };
-
-    await transporter.sendMail(mailOptions);
-    console.log(`Email sent to ${email}`);
-  } catch (error) {
-    console.error('Error sending email:', error);
-  }
-};
-
-// Function to send the reset email
-const sendPasswordResetEmail = async (email, resetLink, name) => {
-  try {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER, // Your email
-        pass: process.env.EMAIL_PASS  // Your email password or app password
-      }
-    });
-
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Password Reset Request',
-      html: `
-        <h3>Hello ${name},</h3>
-        <p>We received a request to reset your password. Please click the link below to reset your password:</p>
-        <a href="${resetLink}" style="padding: 10px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">
-          Reset Password
-        </a>
-        <p>This link will expire in 1 hour.</p>
-        <p>If you did not request a password reset, please ignore this email.</p>
-        <p>Best regards,</p>
-        <p>Admin Team</p>
-      `
-    };
-
-    await transporter.sendMail(mailOptions);
-    console.log(`Password reset email sent to ${email}`);
-  } catch (error) {
-    console.error('Error sending email:', error);
-  }
-};
-
-// Forgot Password function
-const forgotAdminPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ error: 'Please enter your email address.' });
-    }
-
-    // Find employee by email
-    const admin = await Admin.findOne({ email });
-
-    if (!admin) {
-      return res.status(404).json({ error: 'No Admin found with this email address.' });
-    }
-
-    // Generate reset token (valid for 1 hour)
-    const token = jwt.sign({ id: admin._id }, process.env.secretJWTkey, { expiresIn: '1h' });
-
-    // Create reset link
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
-
-    // Send the reset password email
-    await sendPasswordResetEmail(email, resetLink, admin.name);
-
-    // Send success response
-    res.status(200).json({ message: 'Password reset link has been sent to your email.' });
-
-  } catch (err) {
-    console.error('Error in forgot-password:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-
-const resetAdminPassword = async (req, res) => {
-  try {
-      const { token, password, confirmPassword } = req.body;
-
-      if (!token || !password || !confirmPassword) {
-          return res.status(400).json({ error: 'All fields are required.' });
-      }
-
-      if (password !== confirmPassword) {
-          return res.status(400).json({ error: 'Passwords do not match.' });
-      }
-
-      if (password.length < 6) {
-          return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
-      }
-
-      let decoded;
-      try {
-          decoded = jwt.verify(token, process.env.secretJWTkey);
-      } catch (err) {
-          return res.status(400).json({ error: 'Invalid or expired token.' });
-      }
-
-      const admin = await Admin.findById(decoded.id);
-      if (!admin) {
-          return res.status(404).json({ error: 'Admin not found.' });
-      }
-
-      // Hash new password
-      const hashedPassword = await bcrypt.hash(password, 12);
-
-      admin.password = hashedPassword;
-      await admin.save();
-
-      res.status(200).json({ message: 'Password has been successfully reset.' });
-
-  } catch (err) {
-      console.error('Error in reset-admin-password:', err);
-      res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
 
 const editEmployee = async (req, res) => {
   try {
@@ -510,4 +349,4 @@ const viewEmployeeDetails = async (req, res) => {
  
   
 
-module.exports = { register,registerEmployee, login, editEmployee, viewEmployeeDetails,deleteEmployee,resetAdminPassword,forgotAdminPassword };
+module.exports = { register,registerEmployee, login, editEmployee, viewEmployeeDetails,deleteEmployee };
