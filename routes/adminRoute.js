@@ -1,5 +1,5 @@
 const express = require('express');
-const { register, login,registerEmployee,deleteEmployee,viewEmployeeDetails,editEmployee } = require('../controllers/adminController'); // Import controller
+const { register, login,registerEmployee,deleteEmployee,viewEmployeeDetails,editEmployee,getAllEmployees } = require('../controllers/adminController'); // Import controller
 const auth = require('../middlewares/auth');
 const router = express.Router();
 
@@ -16,6 +16,8 @@ router.delete('/deleteEmployee/:employeeId',auth,deleteEmployee);
 router.get('/viewEmployeeDetails/:employeeId',auth,viewEmployeeDetails);
 
 router.put('/editEmployee/:employeeId',auth,editEmployee);
+
+router.get('/getAllEmployees',auth,getAllEmployees);
 
 
 module.exports = router;

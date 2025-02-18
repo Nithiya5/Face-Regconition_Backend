@@ -289,6 +289,23 @@ const viewEmployeeDetails = async (req, res) => {
     }
   };
 
+  const getAllEmployees = async (req, res) => {
+    try {
+        // Fetch all employees, excluding passwords for security
+        const employees = await Employee.find().select('-password');
+
+        if (!employees || employees.length === 0) {
+            return res.status(404).json({ msg: "No employees found" });
+        }
+
+        res.status(200).json({ msg: "Employees fetched successfully", employees });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: "Internal Server Error" });
+    }
+};
+
+
   const deleteEmployee = async (req, res) => {
     try {
       const { employeeId } = req.params;
@@ -308,4 +325,4 @@ const viewEmployeeDetails = async (req, res) => {
   };
    
 
-module.exports = { register,registerEmployee, login, editEmployee, viewEmployeeDetails,deleteEmployee };
+module.exports = { register,registerEmployee, login, editEmployee, viewEmployeeDetails,deleteEmployee,getAllEmployees };
