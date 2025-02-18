@@ -143,9 +143,7 @@ const login = async (req, res) => {
 };
 
 
-const cloudinary = require('cloudinary').v2;
-const multer = require('multer'); // Import multer for file uploads
- // Assuming you have an Employee model
+
 
 // Initialize Cloudinary
 cloudinary.config({
@@ -170,7 +168,7 @@ const upload = multer({ storage: storage }).fields([
   { name: 'faceEmbeddings' }, // Ensures faceEmbeddings is processed correctly
 ]);
 
-const nodemailer = require('nodemailer');
+
 
 const registerEmployee = async (req, res) => {
   try {

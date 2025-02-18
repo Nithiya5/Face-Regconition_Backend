@@ -1,6 +1,7 @@
 const Employee = require('../models/Employee'); // Assuming Employee model is defined
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const Admin = require('../models/Admin');
 
 // Employee login function
 const loginEmployee = async (req, res) => {

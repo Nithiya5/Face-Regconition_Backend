@@ -17,8 +17,5 @@ router.get('/viewEmployeeDetails/:employeeId',auth,viewEmployeeDetails);
 
 router.put('/editEmployee/:employeeId',auth,editEmployee);
 
-router.post('/forgotAdminPassword',forgotAdminPassword);
-
-router.post('/resetAdminPassword',resetAdminPassword);
 
 module.exports = router;
