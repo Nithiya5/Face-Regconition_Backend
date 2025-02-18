@@ -163,64 +163,146 @@ const storage = multer.diskStorage({
 });
 
 // Use .fields() to accept both file and text fields
-const upload = multer({ storage: storage }).fields([
-  { name: 'image', maxCount: 1 }, // Profile image
-  { name: 'faceEmbeddings' }, // Ensures faceEmbeddings is processed correctly
-]);
+// const upload = multer({ storage: storage }).fields([
+//   { name: 'image', maxCount: 1 }, // Profile image
+//   { name: 'faceEmbeddings' }, // Ensures faceEmbeddings is processed correctly
+// ]);
+const upload = multer({ dest: "uploads/" }).single("image");
 
+
+
+
+// const registerEmployee = async (req, res) => {
+//   try {
+//     // Multer upload middleware
+//     upload(req, res, async (err) => {
+//       if (err) {
+//         return res.status(400).json({ error: 'Error uploading profile image' });
+//       }
+
+//       try {
+//         // Extract fields after multer has processed the form-data
+//         const { employeeId, name, department, designation, email, phone, password, canAddVisitor } = req.body;
+//         console.log(department);
+//         console.log(name);
+//         let faceEmbeddings = [];
+        
+
+
+//         // Ensure faceEmbeddings is properly parsed
+//         if (req.body.faceEmbeddings) {
+//           try {
+//             // Parse the faceEmbeddings as an array of arrays
+//             faceEmbeddings = JSON.parse(req.body.faceEmbeddings.trim());
+//           } catch (error) {
+//             return res.status(400).json({ msg: "Invalid face embeddings format. Must be a valid JSON array of arrays." });
+//           }
+//         }
+
+//         // console.log("Parsed faceEmbeddings:", faceEmbeddings); // Debugging step
+
+//         // Ensure faceEmbeddings length is between 1 and 10
+//         if (faceEmbeddings.length === 0 || faceEmbeddings.length > 10) {
+//           return res.status(400).json({ msg: "Face embeddings must be an array with 1-10 values." });
+//         }
+
+//         // Check if email, employeeId, or phone already exist in the database
+//         const existingEmployee = await Employee.findOne({
+//           $or: [{ email }, { employeeId }, { phone }]
+//         });
+
+//         if (existingEmployee) {
+//           return res.status(400).json({ msg: "Employee ID, Email, or Phone already exists." });
+//         }
+
+//         // Hash the password for storing in the database
+//         const salt = await bcrypt.genSalt(10);
+//         const hashedPassword = await bcrypt.hash(password, salt);
+
+//         // Upload the profile image to Cloudinary
+//         const cloudinaryResponse = await cloudinary.uploader.upload(req.files.image[0].path);
+
+//         // Create a new employee record
+//         const newEmployee = new Employee({
+//           employeeId,
+//           name,
+//           department,
+//           designation,
+//           email,
+//           phone,
+//           password: hashedPassword,
+//           faceEmbeddings,  // Storing the parsed and validated face embeddings
+//           canAddVisitor: canAddVisitor || false, // Default to false if not provided
+//           profileImage: cloudinaryResponse.url, // Store Cloudinary image URL in the database
+//         });
+
+//         await newEmployee.save(); // Save the employee record
+
+//         // Send email with login details
+//         sendEmail(email, password, name);
+
+//         // Respond with success
+//         res.status(200).json({
+//           msg: 'Employee registered successfully. Login details sent via email.',
+//           profileImageUrl: cloudinaryResponse.url,
+//           employeeId: newEmployee.employeeId
+//         });
+//       } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ msg: 'Internal Server Error' });
+//       }
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ msg: 'Internal Server Error' });
+//   }
+// };
+
+
+// Function to send email using Nodemailer
 
 
 const registerEmployee = async (req, res) => {
   try {
-    // Multer upload middleware
     upload(req, res, async (err) => {
       if (err) {
-        return res.status(400).json({ error: 'Error uploading profile image' });
+        return res.status(400).json({ error: "Error uploading profile image" });
       }
 
       try {
-        // Extract fields after multer has processed the form-data
         const { employeeId, name, department, designation, email, phone, password, canAddVisitor } = req.body;
-        console.log(department);
-        console.log(name);
         let faceEmbeddings = [];
-        
 
-
-        // Ensure faceEmbeddings is properly parsed
+        // ✅ Parse face embeddings safely
         if (req.body.faceEmbeddings) {
           try {
-            // Parse the faceEmbeddings as an array of arrays
             faceEmbeddings = JSON.parse(req.body.faceEmbeddings.trim());
+            if (faceEmbeddings.length > 10) {
+              return res.status(400).json({ msg: "Face embeddings must be an array with up to 10 values." });
+            }
           } catch (error) {
-            return res.status(400).json({ msg: "Invalid face embeddings format. Must be a valid JSON array of arrays." });
+            return res.status(400).json({ msg: "Invalid face embeddings format. Must be a valid JSON array." });
           }
         }
 
-        // console.log("Parsed faceEmbeddings:", faceEmbeddings); // Debugging step
-
-        // Ensure faceEmbeddings length is between 1 and 10
-        if (faceEmbeddings.length === 0 || faceEmbeddings.length > 10) {
-          return res.status(400).json({ msg: "Face embeddings must be an array with 1-10 values." });
-        }
-
-        // Check if email, employeeId, or phone already exist in the database
-        const existingEmployee = await Employee.findOne({
-          $or: [{ email }, { employeeId }, { phone }]
-        });
-
+        // ✅ Check if the employee already exists
+        const existingEmployee = await Employee.findOne({ $or: [{ email }, { employeeId }, { phone }] });
         if (existingEmployee) {
           return res.status(400).json({ msg: "Employee ID, Email, or Phone already exists." });
         }
 
-        // Hash the password for storing in the database
+        // ✅ Hash password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Upload the profile image to Cloudinary
-        const cloudinaryResponse = await cloudinary.uploader.upload(req.files.image[0].path);
+        let profileImageUrl = "";
+        if (req.file) {
+          // ✅ Upload to Cloudinary
+          const cloudinaryResponse = await cloudinary.uploader.upload(req.file.path);
+          profileImageUrl = cloudinaryResponse.url;
+        }
 
-        // Create a new employee record
+        // ✅ Save Employee in DB
         const newEmployee = new Employee({
           employeeId,
           name,
@@ -229,35 +311,31 @@ const registerEmployee = async (req, res) => {
           email,
           phone,
           password: hashedPassword,
-          faceEmbeddings,  // Storing the parsed and validated face embeddings
-          canAddVisitor: canAddVisitor || false, // Default to false if not provided
-          profileImage: cloudinaryResponse.url, // Store Cloudinary image URL in the database
+          faceEmbeddings,
+          canAddVisitor: canAddVisitor || false,
+          profileImage: profileImageUrl,
         });
 
-        await newEmployee.save(); // Save the employee record
+        await newEmployee.save();
 
-        // Send email with login details
+        // ✅ Send email with login details
         sendEmail(email, password, name);
 
-        // Respond with success
         res.status(200).json({
-          msg: 'Employee registered successfully. Login details sent via email.',
-          profileImageUrl: cloudinaryResponse.url,
-          employeeId: newEmployee.employeeId
+          msg: "Employee registered successfully. Login details sent via email.",
+          profileImageUrl,
+          employeeId: newEmployee.employeeId,
         });
       } catch (error) {
         console.error(error);
-        res.status(500).json({ msg: 'Internal Server Error' });
+        res.status(500).json({ msg: "Internal Server Error" });
       }
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ msg: 'Internal Server Error' });
+    res.status(500).json({ msg: "Internal Server Error" });
   }
 };
-
-
-// Function to send email using Nodemailer
 
 const editEmployee = async (req, res) => {
   try {
