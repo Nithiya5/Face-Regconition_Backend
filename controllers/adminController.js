@@ -110,14 +110,11 @@ const storage = multer.diskStorage({
 });
 
 // Use .fields() to accept both file and text fields
-// const upload = multer({ storage: storage }).fields([
-//   { name: 'image', maxCount: 1 }, // Profile image
-//   { name: 'faceEmbeddings' }, // Ensures faceEmbeddings is processed correctly
-// ]);
-const upload = multer({ dest: "uploads/" }).single("image");
-
-
-
+const upload = multer({ storage: storage }).fields([
+  { name: 'image', maxCount: 1 }, // Profile image
+  { name: 'faceEmbeddings' }, // Ensures faceEmbeddings is processed correctly
+]);
+// const upload = multer({ dest: "uploads/" }).single("image");
 
 const registerEmployee = async (req, res) => {
   try {

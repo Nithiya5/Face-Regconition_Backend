@@ -27,7 +27,7 @@ const loginEmployee = async (req, res) => {
 
         // Generate a JWT token for the employee
         const token = jwt.sign(
-            { employeeId: employee._id, role: employee.role }, // Include employee ID and role
+            { employeeId: employee.employeeId, role: employee.role }, // Include employee ID and role
             'secretJWTkey', // Use an environment variable in production for security
             { expiresIn: '24h' } // Token expiration time
         );
