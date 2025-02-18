@@ -110,10 +110,12 @@ const storage = multer.diskStorage({
 });
 
 // Use .fields() to accept both file and text fields
-const upload = multer({ storage: storage }).fields([
-  { name: 'image', maxCount: 1 }, // Profile image
-  { name: 'faceEmbeddings' }, // Ensures faceEmbeddings is processed correctly
-]);
+// const upload = multer({ storage: storage }).fields([
+//   { name: 'image', maxCount: 1 }, // Profile image
+//   { name: 'faceEmbeddings' }, // Ensures faceEmbeddings is processed correctly
+// ]);
+const upload = multer({ dest: "uploads/" }).single("image");
+
 
 
 
@@ -230,6 +232,9 @@ const sendEmail = async (email, password, name) => {
     console.error("Error sending email:", error);
   }
 };
+
+
+
 
 const editEmployee = async (req, res) => {
   try {
