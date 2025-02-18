@@ -14,7 +14,9 @@ app.use(cors());
 const adminRoutes = require('./routes/adminRoute');
 const visitorRoutes = require('./routes/visitorRoute');
 const employeeRoutes = require('./routes/employeeRoute');
+const authRoutes = require("./routes/authRoute"); 
 
+app.use("/api/auth", authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/visitor', visitorRoutes);
 app.use('/api/employee', employeeRoutes);
