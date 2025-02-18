@@ -1,5 +1,5 @@
 const express = require('express');
-const { register, login,registerEmployee,deleteEmployee,viewEmployeeDetails,editEmployee } = require('../controllers/adminController'); // Import controller
+const { register, login,registerEmployee,deleteEmployee,viewEmployeeDetails,editEmployee } = require('C:\Face-Regconition_Backend\controllers\adminController.js'); // Import controller
 const auth = require('../middlewares/auth');
 const router = express.Router();
 
