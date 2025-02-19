@@ -202,7 +202,7 @@ const sendPasswordResetEmail = async (email, resetLink, name) => {
 
 
 
-const isMatch = (inputEmbeddings, storedEmbeddings, threshold = 0.5) => {
+const isMatch = (inputEmbeddings, storedEmbeddings, threshold = 0.7) => {
   return inputEmbeddings.some(inputEmbedding => 
       storedEmbeddings.some(storedEmbedding => {
           const distance = Math.sqrt(
