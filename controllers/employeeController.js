@@ -219,7 +219,7 @@ const normalize = (embedding) => {
     return embedding.map(val => val / norm);
 };
 
-const isMatch = (inputEmbeddings, storedEmbeddings, threshold = 0.7) => {
+const isMatch = (inputEmbeddings, storedEmbeddings, threshold = 1.0) => {
     return inputEmbeddings.some(inputEmbedding => {
         const normalizedInput = normalize(inputEmbedding);
 
