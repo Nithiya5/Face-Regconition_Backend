@@ -11,9 +11,7 @@ const multer = require('multer'); // Import multer for file uploads
  
  
  // Cloudinary configuration
-//  Multer setup for handling file uploads
- 
- 
+
 
 //  const register = async (req, res) => {
 //   try {

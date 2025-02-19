@@ -15,6 +15,7 @@ const EmployeeSchema = new mongoose.Schema({
     }, 
     profileImage: { type: String },
     canAddVisitors: { type: Boolean, default: false },
+    hasFaceEmbeddings: { type: Boolean, default: false },
     role: { type: String, enum: ['admin', 'employee'], default: 'employee' },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
