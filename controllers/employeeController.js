@@ -187,12 +187,12 @@ const sendPasswordResetEmail = async (email, resetLink, name) => {
             return res.status(400).json({ msg: "Face embeddings must be an array with 1-10 values." });
         }
 
-        // ✅ Update face embeddings in DB
+        // ✅ Update face embeddings in DB and mark hasFaceEmbeddings as true
         employee.faceEmbeddings = faceEmbeddings;
+        employee.hasFaceEmbeddings = true;
         await employee.save(); // Save changes
 
         res.status(200).json({ msg: "Face embeddings updated successfully." });
-
     } catch (error) {
         console.error("Error updating face embeddings:", error);
         res.status(500).json({ msg: "Internal Server Error" });
@@ -200,13 +200,7 @@ const sendPasswordResetEmail = async (email, resetLink, name) => {
 };
 
 
-// ✅ Face Matching Function (Euclidean Distance)
-// const isMatch = (embedding1, embedding2, threshold = 0.5) => {
-//     const distance = Math.sqrt(
-//         embedding1.reduce((sum, val, i) => sum + Math.pow(val - embedding2[i], 2), 0)
-//     );
-//     return distance < threshold;
-// };
+
 
 const isMatch = (inputEmbeddings, storedEmbeddings, threshold = 0.5) => {
   return inputEmbeddings.some(inputEmbedding => 
@@ -219,7 +213,7 @@ const isMatch = (inputEmbeddings, storedEmbeddings, threshold = 0.5) => {
   );
 };
 
-// ✅ Mark Entry or Exit
+
 const markAttendance = async (req, res) => {
     try {
         const { faceEmbedding, isLive, livenessConfidence, phoneDetected, spoofAttempt, deviceId, location } = req.body;
@@ -283,6 +277,8 @@ const markAttendance = async (req, res) => {
         res.status(500).json({ msg: "Internal Server Error" });
     }
 };
+
+
 
   
 
