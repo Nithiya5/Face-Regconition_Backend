@@ -201,11 +201,22 @@ const sendPasswordResetEmail = async (email, resetLink, name) => {
 
 
 // ✅ Face Matching Function (Euclidean Distance)
-const isMatch = (embedding1, embedding2, threshold = 0.5) => {
-    const distance = Math.sqrt(
-        embedding1.reduce((sum, val, i) => sum + Math.pow(val - embedding2[i], 2), 0)
-    );
-    return distance < threshold;
+// const isMatch = (embedding1, embedding2, threshold = 0.5) => {
+//     const distance = Math.sqrt(
+//         embedding1.reduce((sum, val, i) => sum + Math.pow(val - embedding2[i], 2), 0)
+//     );
+//     return distance < threshold;
+// };
+
+const isMatch = (inputEmbeddings, storedEmbeddings, threshold = 0.5) => {
+  return inputEmbeddings.some(inputEmbedding => 
+      storedEmbeddings.some(storedEmbedding => {
+          const distance = Math.sqrt(
+              inputEmbedding.reduce((sum, val, i) => sum + Math.pow(val - storedEmbedding[i], 2), 0)
+          );
+          return distance < threshold;
+      })
+  );
 };
 
 // ✅ Mark Entry or Exit
@@ -215,8 +226,9 @@ const markAttendance = async (req, res) => {
 
         // 🔑 Get employeeId from authenticated user
         const employeeId = req.user?.employeeId; 
+        console.log(employeeId);
 
-        if (!employeeId || !faceEmbedding || faceEmbedding.length !== 128) {
+        if (!employeeId || !faceEmbedding || !isLive || livenessConfidence === undefined || phoneDetected === undefined || spoofAttempt === undefined) {
             return res.status(400).json({ msg: "Invalid request data." });
         }
 
@@ -224,9 +236,9 @@ const markAttendance = async (req, res) => {
         if (!employee) return res.status(404).json({ msg: "Employee not found." });
 
         // ✅ Step 1: Verify Face Match
-        if (!isMatch(faceEmbedding, employee.faceEmbedding)) {
-            return res.status(401).json({ msg: "Face does not match." });
-        }
+        if (!isMatch(faceEmbedding, employee.faceEmbeddings)) {
+          return res.status(401).json({ msg: "Face does not match." });
+      }
 
         // ✅ Step 2: Validate Liveness
         if (!isLive || livenessConfidence < 0.7 || phoneDetected || spoofAttempt) {
