@@ -349,7 +349,7 @@ const editEmployeeDetails = async (req, res) => {
       await employee.save();
 
      
-      const updatedEmployee = await Employee.findOne({ employeeId }).select('-faceEmbeddings');
+      const updatedEmployee = await Employee.findOne({ employeeId }).select('-faceEmbeddings -password');
       res.status(200).json({ msg: "Employee details updated successfully.",updatedEmployee });
   } catch (error) {
       console.error("Error updating employee details:", error);
