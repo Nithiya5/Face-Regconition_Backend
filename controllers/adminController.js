@@ -15,13 +15,64 @@ const multer = require('multer'); // Import multer for file uploads
  
  
 
- const register = async (req, res) => {
+//  const register = async (req, res) => {
+//   try {
+//       const { username, email, password, fullName } = req.body;
+
+//       // Validate input data
+//       if (!username || !email || !password || !fullName) {
+//           return res.status(400).json({ msg: 'All fields are required' });
+//       }
+
+//       // Check if the email already exists in either Admin or Employee collection
+//       const adminExists = await Admin.findOne({ email });
+//       const employeeExists = await Employee.findOne({ email });
+
+//       if (adminExists || employeeExists) {
+//           return res.status(400).json({ msg: 'Email already exists in Admin or Employee database' });
+//       }
+
+//       // Hash the password before saving
+//       const salt = await bcrypt.genSalt(10);
+//       const hashedPassword = await bcrypt.hash(password, salt);
+
+//       // Create a new admin
+//       const newUser = new Admin({
+//           username,
+//           email,
+//           password: hashedPassword,
+//           fullName
+//       });
+
+//       await newUser.save();
+//       res.status(200).json({ msg: 'Admin registered successfully' });
+//   } catch (error) {
+//       console.log(error);
+//       res.status(500).json({ msg: 'Internal Server Error' });
+//   }
+// };
+
+const register = async (req, res) => {
   try {
       const { username, email, password, fullName } = req.body;
 
-      // Validate input data
+      // Validate input fields
       if (!username || !email || !password || !fullName) {
-          return res.status(400).json({ msg: 'All fields are required' });
+          return res.status(400).json({ msg: "All fields are required." });
+      }
+
+      // Validate email format
+      const emailRegex = /^\S+@\S+\.\S+$/;
+      if (!emailRegex.test(email)) {
+          return res.status(400).json({ msg: "Invalid email format." });
+      }
+
+      // Validate password format
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      if (!passwordRegex.test(password)) {
+          return res.status(400).json({
+              msg: "Password must be at least 8 characters long, include one uppercase letter, one lowercase letter, one number, and one special character."
+          });
       }
 
       // Check if the email already exists in either Admin or Employee collection
@@ -29,7 +80,7 @@ const multer = require('multer'); // Import multer for file uploads
       const employeeExists = await Employee.findOne({ email });
 
       if (adminExists || employeeExists) {
-          return res.status(400).json({ msg: 'Email already exists in Admin or Employee database' });
+          return res.status(400).json({ msg: "Email already exists in Admin or Employee database." });
       }
 
       // Hash the password before saving
@@ -45,10 +96,10 @@ const multer = require('multer'); // Import multer for file uploads
       });
 
       await newUser.save();
-      res.status(200).json({ msg: 'Admin registered successfully' });
+      res.status(201).json({ msg: "Admin registered successfully." });
   } catch (error) {
-      console.log(error);
-      res.status(500).json({ msg: 'Internal Server Error' });
+      console.error("Registration error:", error);
+      res.status(500).json({ msg: "Internal Server Error" });
   }
 };
 
@@ -116,6 +167,83 @@ const upload = multer({ storage: storage }).fields([
 ]);
 // const upload = multer({ dest: "uploads/" }).single("image");
 
+// const registerEmployee = async (req, res) => {
+//   try {
+//     upload(req, res, async (err) => {
+//       if (err) {
+//         return res.status(400).json({ error: 'Error uploading profile image' });
+//       }
+
+//       try {
+//         const { employeeId, name, department, designation, email, phone, password, canAddVisitor } = req.body;
+//         let faceEmbeddings = [];
+
+//         // ✅ Make faceEmbeddings Optional
+//         if (req.body.faceEmbeddings) {
+//           try {
+//             faceEmbeddings = JSON.parse(req.body.faceEmbeddings.trim());
+//             if (faceEmbeddings.length > 10) {
+//               return res.status(400).json({ msg: "Face embeddings must be an array with up to 10 values." });
+//             }
+//           } catch (error) {
+//             return res.status(400).json({ msg: "Invalid face embeddings format. Must be a valid JSON array." });
+//           }
+//         } else {
+//           faceEmbeddings = []; // Default to empty array if not provided
+//         }
+
+//         // ✅ Check for existing employee
+//         const existingEmployee = await Employee.findOne({
+//           $or: [{ email }, { employeeId }, { phone }]
+//         });
+
+//         if (existingEmployee) {
+//           return res.status(400).json({ msg: "Employee ID, Email, or Phone already exists." });
+//         }
+
+//         // ✅ Hash password
+//         const salt = await bcrypt.genSalt(10);
+//         const hashedPassword = await bcrypt.hash(password, salt);
+
+//         // ✅ Upload profile image to Cloudinary
+//         const cloudinaryResponse = await cloudinary.uploader.upload(req.files.image[0].path);
+
+//         // ✅ Save Employee in DB
+//         const newEmployee = new Employee({
+//           employeeId,
+//           name,
+//           department,
+//           designation,
+//           email,
+//           phone,
+//           password: hashedPassword,
+//           faceEmbeddings,  // Initially empty
+//           canAddVisitor: canAddVisitor || false,
+//           profileImage: cloudinaryResponse.url, // Cloudinary image URL
+//         });
+
+//         await newEmployee.save();
+
+//         // ✅ Send email with login details
+//         sendEmail(email, password, name);
+
+//         // ✅ Response
+//         res.status(200).json({
+//           msg: 'Employee registered successfully. Login details sent via email.',
+//           profileImageUrl: cloudinaryResponse.url,
+//           employeeId: newEmployee.employeeId
+//         });
+//       } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ msg: 'Internal Server Error' });
+//       }
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ msg: 'Internal Server Error' });
+//   }
+// };
+
 const registerEmployee = async (req, res) => {
   try {
     upload(req, res, async (err) => {
@@ -123,9 +251,39 @@ const registerEmployee = async (req, res) => {
         return res.status(400).json({ error: 'Error uploading profile image' });
       }
 
+      // Helper functions for validation
+      const validateEmail = (email) => {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+      };
+
+      const validatePhone = (phone) => {
+        // This regex accepts an optional '+' and 10 to 15 digits.
+        const re = /^\+?[0-9]{10,15}$/;
+        return re.test(phone);
+      };
+
       try {
         const { employeeId, name, department, designation, email, phone, password, canAddVisitor } = req.body;
         let faceEmbeddings = [];
+
+        // Validate email
+        if (!email || !validateEmail(email)) {
+          return res.status(400).json({ msg: "Invalid email format." });
+        }
+
+        // Validate password (minimum length: 6 characters in this example)
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      if (!passwordRegex.test(password)) {
+          return res.status(400).json({
+              msg: "Password must be at least 8 characters long, include one uppercase letter, one lowercase letter, one number, and one special character."
+          });
+      }
+
+        // Validate phone number
+        if (!phone || !validatePhone(phone)) {
+          return res.status(400).json({ msg: "Invalid phone number." });
+        }
 
         // ✅ Make faceEmbeddings Optional
         if (req.body.faceEmbeddings) {
@@ -166,7 +324,7 @@ const registerEmployee = async (req, res) => {
           email,
           phone,
           password: hashedPassword,
-          faceEmbeddings,  // Initially empty
+          faceEmbeddings,  // Initially empty or provided embeddings
           canAddVisitor: canAddVisitor || false,
           profileImage: cloudinaryResponse.url, // Cloudinary image URL
         });
@@ -192,7 +350,6 @@ const registerEmployee = async (req, res) => {
     res.status(500).json({ msg: 'Internal Server Error' });
   }
 };
-
 
 
 const sendEmail = async (email, password, name) => {

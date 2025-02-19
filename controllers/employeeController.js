@@ -284,6 +284,82 @@ const markAttendance = async (req, res) => {
     }
 };
 
-  
 
-module.exports = { loginEmployee, updateFaceEmbeddings,forgotPassword,resetPassword,markAttendance};
+
+// ✅ View Employee Details
+const viewEmployeeDetails = async (req, res) => {
+    try {
+        const employeeId = req.user?.employeeId; // Get from authenticated user
+
+        if (!employeeId) {
+            return res.status(401).json({ msg: "Unauthorized access." });
+        }
+
+        const employee = await Employee.findOne({ employeeId }).select("-password -faceEmbeddings");
+        if (!employee) {
+            return res.status(404).json({ msg: "Employee not found." });
+        }
+
+        res.status(200).json(employee);
+    } catch (error) {
+        console.error("Error fetching employee details:", error);
+        res.status(500).json({ msg: "Internal Server Error" });
+    }
+};
+
+// ✅ Edit Employee Details
+const editEmployeeDetails = async (req, res) => {
+  try {
+      const employeeId = req.user?.employeeId; // Assuming user authentication middleware sets req.user
+      const { name, department, designation, email, phone,  canAddVisitors } = req.body;
+
+      if (!employeeId) {
+          return res.status(401).json({ msg: "Unauthorized access." });
+      }
+
+      // Fetch the employee record
+      const employee = await Employee.findOne({ employeeId });
+
+      if (!employee) {
+          return res.status(404).json({ msg: "Employee not found." });
+      }
+
+      // Check if phone number already exists for another employee
+      if (phone && phone !== employee.phone) {
+          const existingPhone = await Employee.findOne({ phone });
+          if (existingPhone) {
+              return res.status(400).json({ msg: "Phone number already in use by another employee." });
+          }
+      }
+
+      // Check if email already exists for another employee
+      if (email && email !== employee.email) {
+          const existingEmail = await Employee.findOne({ email });
+          if (existingEmail) {
+              return res.status(400).json({ msg: "Email already in use by another employee." });
+          }
+      }
+
+      // Update employee details
+      employee.name = name || employee.name;
+      employee.department = department || employee.department;
+      employee.designation = designation || employee.designation;
+      employee.email = email || employee.email;
+      employee.phone = phone || employee.phone;
+      // employee.profileImage = profileImage || employee.profileImage;
+      employee.canAddVisitors = canAddVisitors !== undefined ? canAddVisitors : employee.canAddVisitors;
+      employee.updatedAt = new Date();
+
+      await employee.save();
+
+     
+      const updatedEmployee = await Employee.findOne({ employeeId }).select('-faceEmbeddings');
+      res.status(200).json({ msg: "Employee details updated successfully.",updatedEmployee });
+  } catch (error) {
+      console.error("Error updating employee details:", error);
+      res.status(500).json({ msg: "Internal Server Error" });
+  }
+};
+
+
+module.exports = { loginEmployee, updateFaceEmbeddings,forgotPassword,resetPassword,markAttendance,viewEmployeeDetails, editEmployeeDetails};
