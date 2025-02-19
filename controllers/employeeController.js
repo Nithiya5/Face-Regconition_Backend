@@ -202,15 +202,39 @@ const sendPasswordResetEmail = async (email, resetLink, name) => {
 
 
 
+// const isMatch = (inputEmbeddings, storedEmbeddings, threshold = 0.7) => {
+//   return inputEmbeddings.some(inputEmbedding => 
+//       storedEmbeddings.some(storedEmbedding => {
+//           const distance = Math.sqrt(
+//               inputEmbedding.reduce((sum, val, i) => sum + Math.pow(val - storedEmbedding[i], 2), 0)
+//           );
+//           console.log(distance);
+//           return distance < threshold;
+//       })
+//   );
+// };
+
+const normalize = (embedding) => {
+    const norm = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
+    return embedding.map(val => val / norm);
+};
+
 const isMatch = (inputEmbeddings, storedEmbeddings, threshold = 0.7) => {
-  return inputEmbeddings.some(inputEmbedding => 
-      storedEmbeddings.some(storedEmbedding => {
-          const distance = Math.sqrt(
-              inputEmbedding.reduce((sum, val, i) => sum + Math.pow(val - storedEmbedding[i], 2), 0)
-          );
-          return distance < threshold;
-      })
-  );
+    return inputEmbeddings.some(inputEmbedding => {
+        const normalizedInput = normalize(inputEmbedding);
+
+        return storedEmbeddings.some(storedEmbedding => {
+            const normalizedStored = normalize(storedEmbedding);
+
+            // Compute Euclidean distance
+            const distance = Math.sqrt(
+                normalizedInput.reduce((sum, val, i) => sum + Math.pow(val - normalizedStored[i], 2), 0)
+            );
+
+            console.log(`Distance: ${distance}`);
+            return distance < threshold;
+        });
+    });
 };
 
 
