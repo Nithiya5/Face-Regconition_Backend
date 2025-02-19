@@ -166,44 +166,44 @@ const sendPasswordResetEmail = async (email, resetLink, name) => {
   };
   
 
-const updateFaceEmbeddings = async (req, res) => {
+  const updateFaceEmbeddings = async (req, res) => {
     try {
-      console.log(req.user); // Debugging: Check req.user structure
-  
-      // 🔍 Find employee using employeeId from req.user
-      const employee = await Employee.findById(req.user.employeeId);
-  
-      if (!employee) {
-        return res.status(404).json({ msg: "Employee not found." });
-      }
-  
-      const email = employee.email; // ✅ Get email from found employee
-      console.log(email);
-  
-      const { faceEmbeddings } = req.body;
-  
-      // ✅ Validate face embeddings format
-      let parsedEmbeddings;
-      try {
-        parsedEmbeddings = JSON.parse(faceEmbeddings.trim());
-        if (!Array.isArray(parsedEmbeddings) || parsedEmbeddings.length === 0 || parsedEmbeddings.length > 10) {
-          return res.status(400).json({ msg: "Face embeddings must be an array with 1-10 values." });
+        console.log(req.user); // Debugging: Check req.user structure
+
+        // 🔍 Find employee using employeeId as a string, not ObjectId
+        const employee = await Employee.findOne({ employeeId: req.user.employeeId });
+
+        if (!employee) {
+            return res.status(404).json({ msg: "Employee not found." });
         }
-      } catch (error) {
-        return res.status(400).json({ msg: "Invalid face embeddings format." });
-      }
-  
-      // ✅ Update face embeddings in DB
-      employee.faceEmbeddings = parsedEmbeddings;
-      await employee.save(); // Save changes
-  
-      res.status(200).json({ msg: "Face embeddings updated successfully." });
-  
+
+        console.log(employee.email); // ✅ Get email from found employee
+
+        const { faceEmbeddings } = req.body;
+
+        // ✅ Validate face embeddings format
+        let parsedEmbeddings;
+        try {
+            parsedEmbeddings = JSON.parse(faceEmbeddings.trim());
+            if (!Array.isArray(parsedEmbeddings) || parsedEmbeddings.length === 0 || parsedEmbeddings.length > 10) {
+                return res.status(400).json({ msg: "Face embeddings must be an array with 1-10 values." });
+            }
+        } catch (error) {
+            return res.status(400).json({ msg: "Invalid face embeddings format." });
+        }
+
+        // ✅ Update face embeddings in DB
+        employee.faceEmbeddings = parsedEmbeddings;
+        await employee.save(); // Save changes
+
+        res.status(200).json({ msg: "Face embeddings updated successfully." });
+
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ msg: "Internal Server Error" });
+        console.error(error);
+        res.status(500).json({ msg: "Internal Server Error" });
     }
-  };
+};
+
   
 
 module.exports = { loginEmployee, updateFaceEmbeddings,forgotPassword,resetPassword };
