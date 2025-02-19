@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 // Entry Log Schema
 const EntryLogSchema = new mongoose.Schema({
-    employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
+    employeeId: { type: String, required: true },
     entryTime: { type: Date, default: Date.now },
     exitTime: { type: Date },
     deviceId: { type: String }, 
