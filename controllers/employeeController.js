@@ -61,7 +61,7 @@ const sendPasswordResetEmail = async (email, token, name) => {
                 <h3>Hello ${name},</h3>
                 <p>We received a request to reset your password. Below is your password reset token:</p>
                 <p><strong>${token}</strong></p>
-                <p>Go to <a href="${process.env.FRONTEND_URL}/reset">this link</a> and enter the token to reset your password.</p>
+                <p>Go to <a href="${process.env.FRONTEND_URL}">this link</a> and enter the token to reset your password.</p>
                 <p>This token will expire in 1 hour.</p>
                 <p>If you did not request a password reset, please ignore this email.</p>
                 <p>Best regards,</p>
