@@ -238,15 +238,77 @@ const isMatch = (inputEmbeddings, storedEmbeddings, threshold = 0.7) => {
 };
 
 
+// const markAttendance = async (req, res) => {
+//     try {
+//         const { faceEmbedding, isLive, livenessConfidence, phoneDetected, spoofAttempt, deviceId, location } = req.body;
+
+//         // 🔑 Get employeeId from authenticated user
+//         const employeeId = req.user?.employeeId; 
+//         console.log(employeeId);
+
+//         if (!employeeId || !faceEmbedding || !isLive || livenessConfidence === undefined || phoneDetected === undefined || spoofAttempt === undefined) {
+//             return res.status(400).json({ msg: "Invalid request data." });
+//         }
+
+//         const employee = await Employee.findOne({ employeeId });
+//         if (!employee) return res.status(404).json({ msg: "Employee not found." });
+
+//         // ✅ Step 1: Verify Face Match
+//         if (!isMatch(faceEmbedding, employee.faceEmbeddings)) {
+//           return res.status(401).json({ msg: "Face does not match." });
+//       }
+
+//         // ✅ Step 2: Validate Liveness
+//         if (!isLive || livenessConfidence < 0.7 || phoneDetected || spoofAttempt) {
+//             return res.status(400).json({ msg: "Liveness check failed. Possible spoof attempt detected!" });
+//         }
+
+//         const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+
+//         // ✅ Step 3: Find Existing Entry Log for Today
+//         let entryLog = await EntryLog.findOne({
+//             employeeId,
+//             entryTime: { $gte: new Date(today) },
+//         });
+
+//         if (!entryLog) {
+//             // 🟢 First entry of the day → Mark attendance
+//             entryLog = new EntryLog({
+//                 employeeId,
+//                 deviceId,
+//                 location,
+//                 isLive,
+//                 livenessConfidence,
+//                 phoneDetected,
+//                 spoofAttempt,
+//                 hasCheckedIn: true,  // ✅ Marks attendance
+//             });
+//             await entryLog.save();
+//             return res.status(200).json({ msg: "Entry logged successfully!" });
+//         }
+
+//         if (!entryLog.exitTime) {
+//             // 🟢 Second scan → Mark exit time
+//             entryLog.exitTime = new Date();
+//             await entryLog.save();
+//             return res.status(200).json({ msg: "Exit logged successfully!" });
+//         }
+
+//         return res.status(400).json({ msg: "You have already checked out for today." });
+
+//     } catch (error) {
+//         console.error("Error marking attendance:", error);
+//         res.status(500).json({ msg: "Internal Server Error" });
+//     }
+// };
+
+
 const markAttendance = async (req, res) => {
     try {
         const { faceEmbedding, isLive, livenessConfidence, phoneDetected, spoofAttempt, deviceId, location } = req.body;
+        const employeeId = req.user?.employeeId;
 
-        // 🔑 Get employeeId from authenticated user
-        const employeeId = req.user?.employeeId; 
-        console.log(employeeId);
-
-        if (!employeeId || !faceEmbedding || !isLive || livenessConfidence === undefined || phoneDetected === undefined || spoofAttempt === undefined) {
+        if (!employeeId || !faceEmbedding || livenessConfidence === undefined || phoneDetected === undefined || spoofAttempt === undefined) {
             return res.status(400).json({ msg: "Invalid request data." });
         }
 
@@ -255,36 +317,41 @@ const markAttendance = async (req, res) => {
 
         // ✅ Step 1: Verify Face Match
         if (!isMatch(faceEmbedding, employee.faceEmbeddings)) {
-          return res.status(401).json({ msg: "Face does not match." });
-      }
+            return res.status(401).json({ msg: "Face does not match." });
+        }
 
         // ✅ Step 2: Validate Liveness
         if (!isLive || livenessConfidence < 0.7 || phoneDetected || spoofAttempt) {
             return res.status(400).json({ msg: "Liveness check failed. Possible spoof attempt detected!" });
         }
 
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0); // Midnight of today
 
-        // ✅ Step 3: Find Existing Entry Log for Today
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999); // End of today
+
+        // ✅ Step 3: Find an Entry Log for Today
         let entryLog = await EntryLog.findOne({
             employeeId,
-            entryTime: { $gte: new Date(today) },
+            entryTime: { $gte: todayStart, $lte: todayEnd }, // Only today’s logs
         });
 
         if (!entryLog) {
-            // 🟢 First entry of the day → Mark attendance
+            // 🟢 First entry of the day → Create new log
             entryLog = new EntryLog({
                 employeeId,
                 deviceId,
                 location,
+                entryTime: new Date(), // Log entry time
                 isLive,
                 livenessConfidence,
                 phoneDetected,
                 spoofAttempt,
-                hasCheckedIn: true,  // ✅ Marks attendance
+                hasCheckedIn: true,
             });
             await entryLog.save();
-            return res.status(200).json({ msg: "Entry logged successfully!" });
+            return res.status(200).json({ msg: "Attendance marked successfully!" });
         }
 
         if (!entryLog.exitTime) {
@@ -301,10 +368,6 @@ const markAttendance = async (req, res) => {
         res.status(500).json({ msg: "Internal Server Error" });
     }
 };
-
-
-
-
 
 // ✅ View Employee Details
 const viewEmployeeDetails = async (req, res) => {
