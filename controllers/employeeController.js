@@ -241,12 +241,9 @@ const isMatch = (inputEmbeddings, storedEmbeddings, threshold = 1.0) => {
 // const markAttendance = async (req, res) => {
 //     try {
 //         const { faceEmbedding, isLive, livenessConfidence, phoneDetected, spoofAttempt, deviceId, location } = req.body;
+//         const employeeId = req.user?.employeeId;
 
-//         // 🔑 Get employeeId from authenticated user
-//         const employeeId = req.user?.employeeId; 
-//         console.log(employeeId);
-
-//         if (!employeeId || !faceEmbedding || !isLive || livenessConfidence === undefined || phoneDetected === undefined || spoofAttempt === undefined) {
+//         if (!employeeId || !faceEmbedding || livenessConfidence === undefined || phoneDetected === undefined || spoofAttempt === undefined) {
 //             return res.status(400).json({ msg: "Invalid request data." });
 //         }
 
@@ -255,36 +252,41 @@ const isMatch = (inputEmbeddings, storedEmbeddings, threshold = 1.0) => {
 
 //         // ✅ Step 1: Verify Face Match
 //         if (!isMatch(faceEmbedding, employee.faceEmbeddings)) {
-//           return res.status(401).json({ msg: "Face does not match." });
-//       }
+//             return res.status(401).json({ msg: "Face does not match." });
+//         }
 
 //         // ✅ Step 2: Validate Liveness
 //         if (!isLive || livenessConfidence < 0.7 || phoneDetected || spoofAttempt) {
 //             return res.status(400).json({ msg: "Liveness check failed. Possible spoof attempt detected!" });
 //         }
 
-//         const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+//         const todayStart = new Date();
+//         todayStart.setHours(0, 0, 0, 0); // Midnight of today
 
-//         // ✅ Step 3: Find Existing Entry Log for Today
+//         const todayEnd = new Date();
+//         todayEnd.setHours(23, 59, 59, 999); // End of today
+
+//         // ✅ Step 3: Find an Entry Log for Today
 //         let entryLog = await EntryLog.findOne({
 //             employeeId,
-//             entryTime: { $gte: new Date(today) },
+//             entryTime: { $gte: todayStart, $lte: todayEnd }, // Only today’s logs
 //         });
 
 //         if (!entryLog) {
-//             // 🟢 First entry of the day → Mark attendance
+//             // 🟢 First entry of the day → Create new log
 //             entryLog = new EntryLog({
 //                 employeeId,
 //                 deviceId,
 //                 location,
+//                 entryTime: new Date(), // Log entry time
 //                 isLive,
 //                 livenessConfidence,
 //                 phoneDetected,
 //                 spoofAttempt,
-//                 hasCheckedIn: true,  // ✅ Marks attendance
+//                 hasCheckedIn: true,
 //             });
 //             await entryLog.save();
-//             return res.status(200).json({ msg: "Entry logged successfully!" });
+//             return res.status(200).json({ msg: "Attendance marked successfully!" });
 //         }
 
 //         if (!entryLog.exitTime) {
@@ -322,6 +324,13 @@ const markAttendance = async (req, res) => {
 
         // ✅ Step 2: Validate Liveness
         if (!isLive || livenessConfidence < 0.7 || phoneDetected || spoofAttempt) {
+            // 🛑 If spoof attempt detected, send email to admin
+            if (spoofAttempt) {
+                const admins = await Admin.find(); // Retrieve all admins
+                admins.forEach((admin) => {
+                    sendSpoofAlertEmail(admin.email, employee.name, deviceId, location);
+                });
+            }
             return res.status(400).json({ msg: "Liveness check failed. Possible spoof attempt detected!" });
         }
 
@@ -368,6 +377,40 @@ const markAttendance = async (req, res) => {
         res.status(500).json({ msg: "Internal Server Error" });
     }
 };
+
+const sendSpoofAlertEmail = async (adminEmail, employeeName, deviceId, location) => {
+    try {
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: process.env.EMAIL_USER, // Your email address
+          pass: process.env.EMAIL_PASS, // Your email password or app password
+        },
+      });
+  
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: adminEmail,
+        subject: "⚠️ Spoof Attempt Detected in Attendance System",
+        html: `
+          <h3>Security Alert: Spoof Attempt Detected</h3>
+          <p><strong>Employee Name:</strong> ${employeeName}</p>
+          <p><strong>Device ID:</strong> ${deviceId}</p>
+          <p><strong>Location:</strong> ${location?.coordinates?.[1]}, ${location?.coordinates?.[0]}</p>
+          <p><strong>Action Required:</strong> Please review the entry logs and take necessary actions.</p>
+          <p>Best regards,</p>
+          <p>Security System</p>
+        `,
+      };
+  
+      await transporter.sendMail(mailOptions);
+      console.log(`Spoof attempt alert sent to ${adminEmail}`);
+    } catch (error) {
+      console.error("Error sending spoof alert email:", error);
+    }
+  };
+  
+
 
 // ✅ View Employee Details
 const viewEmployeeDetails = async (req, res) => {
