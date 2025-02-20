@@ -43,7 +43,7 @@ const loginEmployee = async (req, res) => {
 const nodemailer = require('nodemailer');
 
 
-const sendPasswordResetEmail = async (email, token, name) => {
+const sendPasswordResetEmail = async (email, resetCode, name) => {
     try {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
@@ -59,13 +59,14 @@ const sendPasswordResetEmail = async (email, token, name) => {
             subject: 'Password Reset Request',
             html: `
                 <h3>Hello ${name},</h3>
-                <p>We received a request to reset your password. Below is your password reset token:</p>
-                <p><strong>${token}</strong></p>
-                <p>Go to <a href="${process.env.FRONTEND_URL}">this link</a> and enter the token to reset your password.</p>
-                <p>This token will expire in 1 hour.</p>
+                <p>We received a request to reset your password. Below is your password reset code:</p>
+                <h2 style="color: #1e40af;">${resetCode}</h2>
+                <p>Enter this code on <a href="${process.env.FRONTEND_URL}">this page</a> to reset your password.</p>
+                <p>This code will expire in 10 minutes.</p>
                 <p>If you did not request a password reset, please ignore this email.</p>
+                <br>
                 <p>Best regards,</p>
-                <p>Admin Team</p>
+                <p><strong>Admin Team</strong></p>
             `
         };
 
@@ -77,78 +78,74 @@ const sendPasswordResetEmail = async (email, token, name) => {
 };
 
 
-  const forgotPassword = async (req, res) => {
+
+const crypto = require("crypto");
+
+const forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
 
         if (!email) {
-            return res.status(400).json({ error: 'Please enter your email address.' });
+            return res.status(400).json({ error: "Please enter your email address." });
         }
 
         const user = await Admin.findOne({ email }) || await Employee.findOne({ email });
 
         if (!user) {
-            return res.status(404).json({ error: 'No user found with this email address.' });
+            return res.status(404).json({ error: "No user found with this email address." });
         }
 
-        const token = jwt.sign({ id: user._id, role: user.role }, process.env.secretJWTkey, { expiresIn: '1h' });
+        const resetCode = crypto.randomInt(100000, 999999).toString();
+        const expirationTime = new Date(Date.now() + 10 * 60 * 1000); 
+        user.resetCode = resetCode;
+        user.resetCodeExpires = expirationTime;
+        await user.save();
 
-        await sendPasswordResetEmail(email, token, user.fullName || user.name);
+        await sendPasswordResetEmail(email, resetCode, user.fullName || user.name);
 
-        res.status(200).json({ message: 'A password reset token has been sent to your email.' });
+        res.status(200).json({ message: "A password reset code has been sent to your email." });
 
     } catch (err) {
-        console.error('Error in forgot-password:', err);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error("Error in forgot-password:", err);
+        res.status(500).json({ error: "Internal server error" });
     }
 };
 
 const resetPassword = async (req, res) => {
     try {
-        const { token, password, confirmPassword } = req.body;
+        const { email, resetCode, password, confirmPassword } = req.body;
 
-        if (!token || !password || !confirmPassword) {
-            return res.status(400).json({ error: 'All fields are required.' });
+        if (!email || !resetCode || !password || !confirmPassword) {
+            return res.status(400).json({ error: "All fields are required." });
         }
 
         if (password !== confirmPassword) {
-            return res.status(400).json({ error: 'Passwords do not match.' });
+            return res.status(400).json({ error: "Passwords do not match." });
         }
 
         if (password.length < 6) {
-            return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+            return res.status(400).json({ error: "Password must be at least 6 characters long." });
         }
 
-        let decoded;
-        try {
-            decoded = jwt.verify(token, process.env.secretJWTkey);
-        } catch (err) {
-            return res.status(400).json({ error: 'Invalid or expired token.' });
+        const user = await Admin.findOne({ email }) || await Employee.findOne({ email });
+
+        if (!user || user.resetCode !== resetCode || new Date() > user.resetCodeExpires) {
+            return res.status(400).json({ error: "Invalid or expired reset code." });
         }
 
-        let user;
-        if (decoded.role === 'Admin') {
-            user = await Admin.findById(decoded.id);
-        } else if (decoded.role === 'Employee') {
-            user = await Employee.findById(decoded.id);
-        }
-
-        if (!user) {
-            return res.status(404).json({ error: 'User not found.' });
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 12);
-
-        user.password = hashedPassword;
+        user.password = await bcrypt.hash(password, 12);
+        user.resetCode = null;
+        user.resetCodeExpires = null;
         await user.save();
 
-        res.status(200).json({ message: 'Password has been successfully reset.' });
+        res.status(200).json({ message: "Password has been successfully reset." });
 
     } catch (err) {
-        console.error('Error in reset-password:', err);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error("Error in reset-password:", err);
+        res.status(500).json({ error: "Internal server error" });
     }
 };
+
 
 
  
