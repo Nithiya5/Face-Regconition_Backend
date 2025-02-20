@@ -304,6 +304,23 @@ const isMatch = (inputEmbeddings, storedEmbeddings, threshold = 1.0) => {
 //     }
 // };
 
+const haversineDistance = (coords1, coords2) => {
+    const toRad = (angle) => (Math.PI / 180) * angle;
+    const R = 6371e3; // Earth's radius in meters
+
+    const lat1 = toRad(coords1[1]), lon1 = toRad(coords1[0]);
+    const lat2 = toRad(coords2[1]), lon2 = toRad(coords2[0]);
+
+    const deltaLat = lat2 - lat1;
+    const deltaLon = lon2 - lon1;
+
+    const a = Math.sin(deltaLat / 2) ** 2 +
+              Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) ** 2;
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in meters
+};
+
 
 const markAttendance = async (req, res) => {
     try {
@@ -333,6 +350,14 @@ const markAttendance = async (req, res) => {
             }
             return res.status(400).json({ msg: "Liveness check failed. Possible spoof attempt detected!" });
         }
+
+        // const COMPANY_LOCATION = [77.5946, 12.9716]; // Replace with actual company longitude, latitude
+        // const MAX_DISTANCE_METERS = 100; // Set the allowed radius (e.g., 100 meters)
+
+        // const distance = haversineDistance(location.coordinates, COMPANY_LOCATION);
+        // if (distance > MAX_DISTANCE_METERS) {
+        //     return res.status(400).json({ msg: "You are outside the company premises. Attendance not allowed!" });
+        // }
 
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0); // Midnight of today
