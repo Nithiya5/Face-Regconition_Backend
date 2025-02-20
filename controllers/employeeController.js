@@ -182,11 +182,6 @@ const sendPasswordResetEmail = async (email, resetLink, name) => {
     }
 };
 
-
-
-
-
-
 const normalize = (embedding) => {
     const norm = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
     return embedding.map(val => val / norm);
@@ -208,8 +203,6 @@ const isMatch = (inputEmbeddings, storedEmbeddings, threshold = 1.0) => {
         });
     });
 };
-
-
 
 const haversineDistance = (coords1, coords2) => {
     const toRad = (angle) => (Math.PI / 180) * angle;
@@ -245,14 +238,15 @@ const markAttendance = async (req, res) => {
             return res.status(401).json({ msg: "Face does not match." });
         }
 
-        if (!isLive || livenessConfidence < 0.7 || phoneDetected || spoofAttempt) {
-            const COMPANY_LOCATION = [77.5946, 12.9716]; 
-            const MAX_DISTANCE_METERS = 100;
+        // const COMPANY_LOCATION = [77.5946, 12.9716]; 
+        // const MAX_DISTANCE_METERS = 100;
 
-             const distance = haversineDistance(location.coordinates, COMPANY_LOCATION);
-        if (distance > MAX_DISTANCE_METERS) {
-            return res.status(400).json({ msg: "You are outside the company premises. Attendance not allowed!" });
-        }
+        // const distance = haversineDistance(location.coordinates, COMPANY_LOCATION);
+        // if (distance > MAX_DISTANCE_METERS) {
+        //     return res.status(400).json({ msg: "You are outside the company premises. Attendance not allowed!" });
+        // }
+
+        if (!isLive || livenessConfidence < 0.7 || phoneDetected || spoofAttempt) {
             if (spoofAttempt) {
                 const admins = await Admin.find(); 
                 admins.forEach((admin) => {

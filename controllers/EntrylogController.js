@@ -5,8 +5,7 @@ const path = require("path");
 
 const viewLogs = async (req, res) => {
     try {
-        const { date, employeeId } = req.query; 
-
+        const { date, employeeId, page = 1, limit = 10 } = req.query; 
         let filter = {};
 
         if (date) {
@@ -18,18 +17,24 @@ const viewLogs = async (req, res) => {
         }
         if (employeeId) filter.employeeId = employeeId;
 
-        const logs = await EntryLog.find(filter).sort({ entryTime: -1 });
+        const logs = await EntryLog.find(filter)
+            .sort({ entryTime: -1 })
+            .limit(parseInt(limit))
+            .skip((parseInt(page) - 1) * parseInt(limit))
+            .select("employeeId entryTime exitTime deviceId location isLive spoofAttempt")
+            .lean();
 
-        res.status(200).json(logs);
+        res.status(200).json({ logs, page: parseInt(page), limit: parseInt(limit) });
     } catch (error) {
         console.error("Error fetching logs:", error);
         res.status(500).json({ msg: "Internal Server Error" });
     }
 };
 
+
 const exportLogs = async (req, res) => {
     try {
-        const logs = await EntryLog.find().lean(); 
+        const logs = await EntryLog.find().sort({ employeeId: 1, entryTime: 1 }).lean();
 
         if (!logs.length) return res.status(404).json({ msg: "No logs found!" });
 
@@ -38,15 +43,29 @@ const exportLogs = async (req, res) => {
 
         worksheet.columns = [
             { header: "Employee ID", key: "employeeId", width: 15 },
-            { header: "Entry Time", key: "entryTime", width: 25 },
-            { header: "Exit Time", key: "exitTime", width: 25 },
-            { header: "Device ID", key: "deviceId", width: 20 },
-            { header: "Location", key: "location", width: 20 },
+            { header: "Date", key: "date", width: 15 },
+            { header: "Entry Time", key: "entryTime", width: 20 },
+            { header: "Exit Time", key: "exitTime", width: 20 },
+            { header: "Device ID", key: "deviceId", width: 15 },
+            { header: "Latitude", key: "latitude", width: 15 },
+            { header: "Longitude", key: "longitude", width: 15 },
             { header: "Is Live", key: "isLive", width: 10 },
             { header: "Spoof Attempt", key: "spoofAttempt", width: 15 },
         ];
 
-        logs.forEach(log => worksheet.addRow(log));
+        logs.forEach(log => {
+            worksheet.addRow({
+                employeeId: log.employeeId,
+                date: log.entryTime.toISOString().split("T")[0], 
+                entryTime: log.entryTime.toLocaleString(), 
+                exitTime: log.exitTime ? log.exitTime.toLocaleString() : "Not Checked Out", 
+                deviceId: log.deviceId || "N/A",
+                latitude: log.location?.coordinates[1] || "N/A",
+                longitude: log.location?.coordinates[0] || "N/A",
+                isLive: log.isLive ? "Yes" : "No",
+                spoofAttempt: log.spoofAttempt ? "Yes" : "No",
+            });
+        });
 
         const filePath = path.join(__dirname, "../exports/logs.xlsx");
         await workbook.xlsx.writeFile(filePath);
@@ -59,14 +78,12 @@ const exportLogs = async (req, res) => {
     }
 };
 
-
 const viewEmployeeLogs = async (req, res) => {
     try {
         const employeeId = req.user.employeeId;
-
         if (!employeeId) return res.status(403).json({ msg: "Unauthorized" });
 
-        const { date } = req.query; 
+        const { date, page = 1, limit = 10 } = req.query;
         let filter = { employeeId };
 
         if (date) {
@@ -77,14 +94,20 @@ const viewEmployeeLogs = async (req, res) => {
             filter.entryTime = { $gte: start, $lte: end };
         }
 
-        const logs = await EntryLog.find(filter).sort({ entryTime: -1 });
+        const logs = await EntryLog.find(filter)
+            .sort({ entryTime: -1 })
+            .limit(parseInt(limit))
+            .skip((parseInt(page) - 1) * parseInt(limit))
+            .select("entryTime exitTime deviceId location isLive spoofAttempt")
+            .lean();
 
-        res.status(200).json(logs);
+        res.status(200).json({ logs, page: parseInt(page), limit: parseInt(limit) });
     } catch (error) {
         console.error("Error fetching logs:", error);
         res.status(500).json({ msg: "Internal Server Error" });
     }
 };
+
 
 const exportEmployeeLogs = async (req, res) => {
     try {
@@ -92,24 +115,36 @@ const exportEmployeeLogs = async (req, res) => {
 
         if (!employeeId) return res.status(403).json({ msg: "Unauthorized" });
 
-        const logs = await EntryLog.find({ employeeId }).lean();
+        const logs = await EntryLog.find({ employeeId }).sort({ entryTime: 1 }).lean();
 
         if (!logs.length) return res.status(404).json({ msg: "No logs found!" });
 
         const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet("My Entry Logs");
+        const worksheet = workbook.addWorksheet(`Logs - ${employeeId}`);
 
         worksheet.columns = [
-            { header: "Employee ID", key: "employeeId", width: 15 },
-            { header: "Entry Time", key: "entryTime", width: 25 },
-            { header: "Exit Time", key: "exitTime", width: 25 },
-            { header: "Device ID", key: "deviceId", width: 20 },
-            { header: "Location", key: "location", width: 20 },
+            { header: "Date", key: "date", width: 15 },
+            { header: "Entry Time", key: "entryTime", width: 20 },
+            { header: "Exit Time", key: "exitTime", width: 20 },
+            { header: "Device ID", key: "deviceId", width: 15 },
+            { header: "Latitude", key: "latitude", width: 15 },
+            { header: "Longitude", key: "longitude", width: 15 },
             { header: "Is Live", key: "isLive", width: 10 },
             { header: "Spoof Attempt", key: "spoofAttempt", width: 15 },
         ];
 
-        logs.forEach(log => worksheet.addRow(log));
+        logs.forEach(log => {
+            worksheet.addRow({
+                date: log.entryTime.toISOString().split("T")[0],
+                entryTime: log.entryTime.toLocaleString(),
+                exitTime: log.exitTime ? log.exitTime.toLocaleString() : "Not Checked Out", 
+                deviceId: log.deviceId || "N/A",
+                latitude: log.location?.coordinates[1] || "N/A",
+                longitude: log.location?.coordinates[0] || "N/A",
+                isLive: log.isLive ? "Yes" : "No",
+                spoofAttempt: log.spoofAttempt ? "Yes" : "No",
+            });
+        });
 
         const filePath = path.join(__dirname, `../exports/logs_${employeeId}.xlsx`);
         await workbook.xlsx.writeFile(filePath);
@@ -117,10 +152,11 @@ const exportEmployeeLogs = async (req, res) => {
         res.download(filePath, `logs_${employeeId}.xlsx`, () => fs.unlinkSync(filePath));
 
     } catch (error) {
-        console.error("Error exporting logs:", error);
+        console.error("Error exporting employee logs:", error);
         res.status(500).json({ msg: "Internal Server Error" });
     }
 };
+
 
 const getBusinessDays = (startDate, endDate) => {
     let count = 0;
@@ -141,47 +177,43 @@ const getBusinessDays = (startDate, endDate) => {
 
 const getAllAttendanceStats = async (req, res) => {
     try {
-        const logs = await EntryLog.find({}).lean();
-        if (!logs.length) {
-            return res.status(404).json({ msg: "No attendance records found." });
-        }
+        const today = new Date();
 
-        const statsMap = {};
+        const firstLogs = await EntryLog.aggregate([
+            { $sort: { entryTime: 1 } },
+            { $group: { _id: "$employeeId", firstEntry: { $first: "$entryTime" } } }
+        ]);
 
-        logs.forEach(log => {
-            const day = log.entryTime.toISOString().split("T")[0];
-            if (!statsMap[log.employeeId]) {
-                statsMap[log.employeeId] = {
-                    employeeId: log.employeeId,
-                    presentDaysSet: new Set(),
-                    earliest: log.entryTime
-                };
+        if (!firstLogs.length) return res.status(404).json({ msg: "No attendance records found." });
+
+        const attendanceCounts = await EntryLog.aggregate([
+            { 
+                $group: { 
+                    _id: { employeeId: "$employeeId", date: { $dateToString: { format: "%Y-%m-%d", date: "$entryTime" } } }
+                }
+            },
+            { 
+                $group: { 
+                    _id: "$_id.employeeId", 
+                    presentDays: { $sum: 1 } 
+                }
             }
-            statsMap[log.employeeId].presentDaysSet.add(day);
-            if (log.entryTime < statsMap[log.employeeId].earliest) {
-                statsMap[log.employeeId].earliest = log.entryTime;
-            }
+        ]);
+
+        const attendanceMap = {};
+        attendanceCounts.forEach(record => {
+            attendanceMap[record._id] = record.presentDays;
         });
 
-        const today = new Date();
-        const stats = [];
-
-        for (const employeeId in statsMap) {
-            const record = statsMap[employeeId];
-            const presentDays = record.presentDaysSet.size;
-    
-            const totalDays = getBusinessDays(record.earliest, today);
+        const stats = firstLogs.map(record => {
+            const employeeId = record._id;
+            const presentDays = attendanceMap[employeeId] || 0;
+            const totalDays = getBusinessDays(record.firstEntry, today);
             const absentDays = totalDays - presentDays;
             const attendancePercentage = totalDays > 0 ? ((presentDays / totalDays) * 100).toFixed(2) : "0.00";
 
-            stats.push({
-                employeeId,
-                presentDays,
-                totalDays,
-                absentDays,
-                attendancePercentage: `${attendancePercentage}%`
-            });
-        }
+            return { employeeId, presentDays, totalDays, absentDays, attendancePercentage: `${attendancePercentage}%` };
+        });
 
         if (req.query.export === "true") {
             const workbook = new ExcelJS.Workbook();
@@ -200,39 +232,37 @@ const getAllAttendanceStats = async (req, res) => {
             const filePath = path.join(__dirname, "../exports/attendance_stats.xlsx");
             await workbook.xlsx.writeFile(filePath);
             return res.download(filePath, "attendance_stats.xlsx", () => fs.unlinkSync(filePath));
-        } else {
-            res.status(200).json(stats);
         }
+
+        res.status(200).json(stats);
     } catch (error) {
         console.error("Error fetching attendance stats:", error);
         res.status(500).json({ msg: "Internal Server Error" });
     }
 };
 
+
 const getAttendanceStats = async (req, res) => {
     try {
         const employeeId = req.user.employeeId;
-        if (!employeeId) {
-            return res.status(403).json({ msg: "Unauthorized" });
-        }
+        if (!employeeId) return res.status(403).json({ msg: "Unauthorized" });
 
-        const logs = await EntryLog.find({ employeeId });
-        if (!logs.length) {
-            return res.status(404).json({ msg: "No attendance records found!" });
-        }
-
-        const presentDaysSet = new Set(logs.map(log => log.entryTime.toISOString().split("T")[0]));
-        const earliest = logs.reduce((min, log) => (log.entryTime < min ? log.entryTime : min), logs[0].entryTime);
         const today = new Date();
+        const firstLog = await EntryLog.findOne({ employeeId }).sort({ entryTime: 1 }).select("entryTime").lean();
+        if (!firstLog) return res.status(404).json({ msg: "No attendance records found!" });
 
-        const totalDays = getBusinessDays(earliest, today);
-        const presentDays = presentDaysSet.size;
-        const absentDays = totalDays - presentDays;
-        const attendancePercentage = totalDays > 0 ? ((presentDays / totalDays) * 100).toFixed(2) : "0.00";
+        const totalDays = getBusinessDays(firstLog.entryTime, today);
+        const presentDays = await EntryLog.aggregate([
+            { $match: { employeeId } },
+            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$entryTime" } } } }
+        ]);
+
+        const absentDays = totalDays - presentDays.length;
+        const attendancePercentage = totalDays > 0 ? ((presentDays.length / totalDays) * 100).toFixed(2) : "0.00";
 
         res.status(200).json({
             totalBusinessDays: totalDays,
-            presentDays,
+            presentDays: presentDays.length,
             absentDays,
             attendancePercentage: `${attendancePercentage}%`,
         });
@@ -241,6 +271,7 @@ const getAttendanceStats = async (req, res) => {
         res.status(500).json({ msg: "Internal Server Error" });
     }
 };
+
 
 
 
