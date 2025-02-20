@@ -81,31 +81,35 @@ const sendPasswordResetEmail = async (email, resetLink, name) => {
   const forgotPassword = async (req, res) => {
     try {
       const { email } = req.body;
-  
+
       if (!email) {
         return res.status(400).json({ error: 'Please enter your email address.' });
       }
-  
+
       const user = await Admin.findOne({ email }) || await Employee.findOne({ email });
-  
+
       if (!user) {
         return res.status(404).json({ error: 'No user found with this email address.' });
       }
-  
+
+      console.log('User found:', user); // Debugging
+
       const token = jwt.sign({ id: user._id, role: user.role }, process.env.secretJWTkey, { expiresIn: '1h' });
-  
+
       const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
-  
-      await sendPasswordResetEmail(email, resetLink, user.name);
-  
+
+      // Handle both fullName (Admin) and name (Employee)
+      const userName = user.fullName || user.name || "User";
+      await sendPasswordResetEmail(email, resetLink, userName);
+
       res.status(200).json({ message: 'Password reset link has been sent to your email.' });
-  
+
     } catch (err) {
       console.error('Error in forgot-password:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
-  };
-  
+};
+
   const resetPassword = async (req, res) => {
     try {
         const { token, password, confirmPassword } = req.body;
@@ -119,7 +123,7 @@ const sendPasswordResetEmail = async (email, resetLink, name) => {
         }
   
         if (password.length < 6) {
-            return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+            return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
         }
   
         let decoded;
