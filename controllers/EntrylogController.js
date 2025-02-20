@@ -175,6 +175,7 @@ const getBusinessDays = (startDate, endDate) => {
     return count;
 };
 
+
 const getAllAttendanceStats = async (req, res) => {
     try {
         const today = new Date();
@@ -216,6 +217,12 @@ const getAllAttendanceStats = async (req, res) => {
         });
 
         if (req.query.export === "true") {
+            const exportDir = path.join(__dirname, "../exports");
+            if (!fs.existsSync(exportDir)) {
+                fs.mkdirSync(exportDir, { recursive: true });  
+            }
+
+            const filePath = path.join(exportDir, "attendance_stats.xlsx");
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Attendance Stats");
 
@@ -229,9 +236,13 @@ const getAllAttendanceStats = async (req, res) => {
 
             stats.forEach(stat => worksheet.addRow(stat));
 
-            const filePath = path.join(__dirname, "../exports/attendance_stats.xlsx");
             await workbook.xlsx.writeFile(filePath);
-            return res.download(filePath, "attendance_stats.xlsx", () => fs.unlinkSync(filePath));
+            return res.download(filePath, "attendance_stats.xlsx", (err) => {
+                if (err) {
+                    console.error("Download error:", err);
+                }
+                fs.unlinkSync(filePath); 
+            });
         }
 
         res.status(200).json(stats);
@@ -260,20 +271,49 @@ const getAttendanceStats = async (req, res) => {
         const absentDays = totalDays - presentDays.length;
         const attendancePercentage = totalDays > 0 ? ((presentDays.length / totalDays) * 100).toFixed(2) : "0.00";
 
-        res.status(200).json({
+        const stats = {
+            employeeId,
             totalBusinessDays: totalDays,
             presentDays: presentDays.length,
             absentDays,
             attendancePercentage: `${attendancePercentage}%`,
-        });
+        };
+
+        if (req.query.export === "true") {
+            const exportDir = path.join(__dirname, "../exports");
+            if (!fs.existsSync(exportDir)) {
+                fs.mkdirSync(exportDir, { recursive: true });  // Ensure folder exists
+            }
+
+            const filePath = path.join(exportDir, `attendance_stats_${employeeId}.xlsx`);
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet("Attendance Stats");
+
+            worksheet.columns = [
+                { header: "Employee ID", key: "employeeId", width: 15 },
+                { header: "Total Business Days", key: "totalBusinessDays", width: 20 },
+                { header: "Present Days", key: "presentDays", width: 15 },
+                { header: "Absent Days", key: "absentDays", width: 15 },
+                { header: "Attendance %", key: "attendancePercentage", width: 15 },
+            ];
+
+            worksheet.addRow(stats);
+
+            await workbook.xlsx.writeFile(filePath);
+            return res.download(filePath, `attendance_stats_${employeeId}.xlsx`, (err) => {
+                if (err) {
+                    console.error("Download error:", err);
+                }
+                fs.unlinkSync(filePath); // Delete file after download
+            });
+        }
+
+        res.status(200).json(stats);
     } catch (error) {
         console.error("Error calculating attendance stats:", error);
         res.status(500).json({ msg: "Internal Server Error" });
     }
 };
-
-
-
 
 module.exports = { viewLogs, exportLogs, viewEmployeeLogs, exportEmployeeLogs, getAllAttendanceStats, getAttendanceStats };
 
