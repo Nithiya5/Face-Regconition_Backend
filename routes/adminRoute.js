@@ -1,12 +1,10 @@
 const express = require('express');
-const { register, login,registerEmployee,deleteEmployee,viewEmployeeDetails,editEmployee,getAllEmployees } = require('../controllers/adminController'); // Import controller
+const { register, login,registerEmployee,deleteEmployee,viewEmployeeDetails,editEmployee,getAllEmployees } = require('../controllers/adminController');
 const auth = require('../middlewares/auth');
 const router = express.Router();
 
-// Route for registering users (admin, employee, visitor)
 router.post('/register', register);
 
-// Route for logging in users (admin, employee, visitor)
 router.post('/login', login);
 
 router.post('/registerEmployee',auth,registerEmployee);

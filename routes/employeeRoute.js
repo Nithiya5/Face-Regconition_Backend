@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const auth = require("../middlewares/auth");
-const { loginEmployee,forgotPassword,resetPassword,updateFaceEmbeddings,markAttendance,viewEmployeeDetails,editEmployeeDetails } = require('../controllers/employeeController'); // Import the login function
+const { loginEmployee,forgotPassword,resetPassword,updateFaceEmbeddings,markAttendance,viewEmployeeDetails,editEmployeeDetails } = require('../controllers/employeeController'); 
 
-router.post('/login', loginEmployee); // POST request to /login
+router.post('/login', loginEmployee); 
 router.post('/forgotPassword',forgotPassword);
 router.post('/resetPassword',resetPassword);
 router.put('/updateFaceEmbeddings',auth,updateFaceEmbeddings);

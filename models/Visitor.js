@@ -6,25 +6,21 @@ const VisitorSchema = new mongoose.Schema({
     purpose: { type: String, required: true },
     contactInfo: { type: String },
 
-    // Stores multiple entry & exit times for each visit
     visitHistory: [{
         entryTime: { type: Date, required: true, default: Date.now },
         exitTime: { type: Date }
     }],
 
-    // Automatically calculates total visits
     totalVisits: { 
         type: Number, 
         default: 0 
     },
 
-    // Reference Employee using employeeId instead of ObjectId
     hostEmployeeId: { 
-        type: String, // Change from ObjectId to String to match the Employee's employeeId
+        type: String, 
         required: true 
       },  
 
-    // Cloudinary URL for profile image
     profileImage: { type: String }
 });
 

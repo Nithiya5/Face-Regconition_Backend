@@ -5,7 +5,7 @@ const path = require("path");
 
 const viewLogs = async (req, res) => {
     try {
-        const { date, employeeId } = req.query; // Only date & employeeId filters
+        const { date, employeeId } = req.query; 
 
         let filter = {};
 
@@ -29,15 +29,13 @@ const viewLogs = async (req, res) => {
 
 const exportLogs = async (req, res) => {
     try {
-        const logs = await EntryLog.find().lean(); // Fetch all logs
+        const logs = await EntryLog.find().lean(); 
 
         if (!logs.length) return res.status(404).json({ msg: "No logs found!" });
 
-        // Create a new Excel Workbook and Worksheet
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Entry Logs");
 
-        // Define columns
         worksheet.columns = [
             { header: "Employee ID", key: "employeeId", width: 15 },
             { header: "Entry Time", key: "entryTime", width: 25 },
@@ -48,14 +46,11 @@ const exportLogs = async (req, res) => {
             { header: "Spoof Attempt", key: "spoofAttempt", width: 15 },
         ];
 
-        // Add data to worksheet
         logs.forEach(log => worksheet.addRow(log));
 
-        // Save file temporarily
         const filePath = path.join(__dirname, "../exports/logs.xlsx");
         await workbook.xlsx.writeFile(filePath);
 
-        // Send file for download and delete it after sending
         res.download(filePath, "logs.xlsx", () => fs.unlinkSync(filePath));
 
     } catch (error) {
@@ -67,11 +62,11 @@ const exportLogs = async (req, res) => {
 
 const viewEmployeeLogs = async (req, res) => {
     try {
-        const employeeId = req.user.employeeId; // Get employee ID from authenticated user
+        const employeeId = req.user.employeeId;
 
         if (!employeeId) return res.status(403).json({ msg: "Unauthorized" });
 
-        const { date } = req.query; // Filter by date if provided
+        const { date } = req.query; 
         let filter = { employeeId };
 
         if (date) {
@@ -130,14 +125,12 @@ const exportEmployeeLogs = async (req, res) => {
 const getBusinessDays = (startDate, endDate) => {
     let count = 0;
     let curDate = new Date(startDate);
-    // Ensure we compare dates properly (ignoring time)
     curDate.setHours(0, 0, 0, 0);
     endDate = new Date(endDate);
     endDate.setHours(0, 0, 0, 0);
   
     while (curDate <= endDate) {
         const day = curDate.getDay();
-        // Day 0 is Sunday, day 6 is Saturday.
         if (day !== 0 && day !== 6) {
             count++;
         }
@@ -148,17 +141,14 @@ const getBusinessDays = (startDate, endDate) => {
 
 const getAllAttendanceStats = async (req, res) => {
     try {
-        // Fetch all entry logs
         const logs = await EntryLog.find({}).lean();
         if (!logs.length) {
             return res.status(404).json({ msg: "No attendance records found." });
         }
 
-        // Group logs by employeeId and track present days and earliest log date per employee
         const statsMap = {};
 
         logs.forEach(log => {
-            // Extract the date part (YYYY-MM-DD) from entryTime
             const day = log.entryTime.toISOString().split("T")[0];
             if (!statsMap[log.employeeId]) {
                 statsMap[log.employeeId] = {
@@ -176,11 +166,10 @@ const getAllAttendanceStats = async (req, res) => {
         const today = new Date();
         const stats = [];
 
-        // For each employee, compute attendance stats using business days
         for (const employeeId in statsMap) {
             const record = statsMap[employeeId];
             const presentDays = record.presentDaysSet.size;
-            // Calculate total business days between earliest log and today
+    
             const totalDays = getBusinessDays(record.earliest, today);
             const absentDays = totalDays - presentDays;
             const attendancePercentage = totalDays > 0 ? ((presentDays / totalDays) * 100).toFixed(2) : "0.00";
@@ -194,7 +183,6 @@ const getAllAttendanceStats = async (req, res) => {
             });
         }
 
-        // If the admin requests an export, check for query parameter "export=true"
         if (req.query.export === "true") {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Attendance Stats");
@@ -213,7 +201,6 @@ const getAllAttendanceStats = async (req, res) => {
             await workbook.xlsx.writeFile(filePath);
             return res.download(filePath, "attendance_stats.xlsx", () => fs.unlinkSync(filePath));
         } else {
-            // Otherwise, send the stats as JSON
             res.status(200).json(stats);
         }
     } catch (error) {
@@ -234,13 +221,10 @@ const getAttendanceStats = async (req, res) => {
             return res.status(404).json({ msg: "No attendance records found!" });
         }
 
-        // Create a set of unique present days
         const presentDaysSet = new Set(logs.map(log => log.entryTime.toISOString().split("T")[0]));
-        // Find the earliest log date for the employee
         const earliest = logs.reduce((min, log) => (log.entryTime < min ? log.entryTime : min), logs[0].entryTime);
         const today = new Date();
 
-        // Calculate total business days between the earliest log and today
         const totalDays = getBusinessDays(earliest, today);
         const presentDays = presentDaysSet.size;
         const absentDays = totalDays - presentDays;

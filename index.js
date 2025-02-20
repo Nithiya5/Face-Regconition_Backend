@@ -5,8 +5,8 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-app.use(express.json()); // Parse JSON bodies
-app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true })); 
 
 app.use(bodyparser.json())
 app.use(cors());
