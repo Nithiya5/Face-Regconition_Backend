@@ -258,5 +258,7 @@ const getAttendanceStats = async (req, res) => {
     }
 };
 
+
+
 module.exports = { viewLogs, exportLogs, viewEmployeeLogs, exportEmployeeLogs, getAllAttendanceStats, getAttendanceStats };
 
