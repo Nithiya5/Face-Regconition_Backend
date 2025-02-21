@@ -347,4 +347,65 @@ const viewEmployeeDetails = async (req, res) => {
 };
 
 
-module.exports = { register,registerEmployee, login, editEmployee, viewEmployeeDetails,deleteEmployee,getAllEmployees,updateAdminDetails };
+const submitSupportIssue = async (req, res) => {
+  try {
+    const { description, email, priority, category } = req.body;
+
+    if (!description || !email || !priority || !category) {
+      return res.status(400).json({ msg: "All fields (description, email, priority, category) are required." });
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER, 
+        pass: process.env.EMAIL_PASS, 
+      },
+    });
+
+    const supportMailOptions = {
+      from: `"Support System" <${process.env.GMAIL_USER}>`,
+      to: process.env.IT_SUPPORT_EMAIL, 
+      subject: `New Support Issue [${priority}] - ${category}`,
+      text: `A new support issue has been submitted.
+
+Issue Description:
+${description}
+
+From: ${email}`,
+      html: `<p>A new support issue has been submitted.</p>
+             <p><strong>Issue Description:</strong> ${description}</p>
+             <p><strong>Priority:</strong> ${priority}</p>
+             <p><strong>Category:</strong> ${category}</p>
+             <p><strong>User Email:</strong> ${email}</p>`,
+    };
+
+    const userMailOptions = {
+      from: `"Support System" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Support Issue Received",
+      text: `Thank you for contacting IT Support. We have received your issue and will respond shortly.
+
+Issue Details:
+Description: ${description}
+Priority: ${priority}
+Category: ${category}`,
+      html: `<p>Thank you for contacting IT Support. We have received your issue and will respond shortly.</p>
+             <p><strong>Issue Description:</strong> ${description}</p>
+             <p><strong>Priority:</strong> ${priority}</p>
+             <p><strong>Category:</strong> ${category}</p>`,
+    };
+
+    await Promise.all([
+      transporter.sendMail(supportMailOptions),
+      transporter.sendMail(userMailOptions)
+    ]);
+
+    res.status(200).json({ msg: "Support issue submitted successfully. Confirmation email sent." });
+  } catch (error) {
+    console.error("Error submitting support issue:", error);
+    res.status(500).json({ msg: "Internal Server Error" });
+  }
+};
+
+module.exports = { register,registerEmployee, login, editEmployee, viewEmployeeDetails,deleteEmployee,getAllEmployees,updateAdminDetails,submitSupportIssue  };
