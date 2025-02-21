@@ -325,4 +325,26 @@ const viewEmployeeDetails = async (req, res) => {
   };
    
 
-module.exports = { register,registerEmployee, login, editEmployee, viewEmployeeDetails,deleteEmployee,getAllEmployees };
+  const updateAdminDetails = async (req, res) => {
+    try {
+        const adminId = req.user.userId; 
+        const updatedData = req.body; 
+
+        const updatedAdmin = await Admin.findByIdAndUpdate(
+            adminId,
+            { $set: updatedData },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedAdmin) {
+            return res.status(404).json({ success: false, message: "Admin not found" });
+        }
+
+        res.status(200).json({ success: true, data: updatedAdmin });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+
+module.exports = { register,registerEmployee, login, editEmployee, viewEmployeeDetails,deleteEmployee,getAllEmployees,updateAdminDetails };
